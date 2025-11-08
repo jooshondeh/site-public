@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Website Under Construction</title>
+  <meta name="description" content="This site is under construction. Check back soon." />
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <main class="wrap">
+    <div class="card">
+      <div class="icon">🚧</div>
+      <h1>We&rsquo;re Building Something Great</h1>
+      <p>Our website is currently under construction. Please check back soon.</p>
+      <div class="status">
+        <span class="dot"></span>
+        <span>status: active maintenance</span>
+      </div>
+      <div class="footer">
+        <p>&copy; <span id="year"></span> Your Company. All rights reserved.</p>
+      </div>
+    </div>
+  </main>
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
