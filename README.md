@@ -1,6 +1,6 @@
-# Under Construction Placeholder Site
+# NexGen Binary LLC - Under Construction Page
 
-This repository is a minimal, production-ready **Under Construction** page for GitHub Pages.
+This repository hosts a secure **Under Construction** placeholder for NexGen Binary LLC.
 
 ## How to use
 
@@ -12,6 +12,10 @@ This repository is a minimal, production-ready **Under Construction** page for G
    - `A` records for `@` → `185.199.108.153`, `185.199.109.153`, `185.199.110.153`, `185.199.111.153`
 5. After your main site is ready, replace `index.html` with your real content.
 
+## Security & Privacy
+- Includes meta tags: `noindex, nofollow, noarchive, nosnippet` to prevent indexing.
+- Additional headers: `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, and `Permissions-Policy` for protection.
+- `robots.txt` blocks all crawlers until ready to go live.
+
 ## Notes
-- `robots.txt` and `<meta name="robots" content="noindex,nofollow">` block indexing while you build. Remove them when going live.
-- Keep this repo **public** if using free GitHub Pages. Private Pages requires a paid GitHub plan.
+- Keep this repo **public** if using free GitHub Pages. Private Pages require a paid GitHub plan.
