@@ -2,13 +2,13 @@
 
 Production repository for **NexGen Binary LLC**.
 
-- Website: `https://nexgenbinary.com`
+- Website: https://nexgenbinary.com/
 - Repository: `jooshondeh/site-public`
-- Deployment: `.github/workflows/static.yml`
-- Contact form: Formspree + hCaptcha
+- Hosting: GitHub Pages through `.github/workflows/static.yml`
+- Analytics: Google Analytics 4 `G-YY6Q8RTE7R` with Consent Mode
+- Contact form: Formspree + lazily loaded hCaptcha
 - Scheduling: Microsoft Bookings
-- Analytics: optional GA4; deployment succeeds whether configured or not
+- Google Business: https://share.google/UWWubeCa8CN4sffAM
 
-The workflow publishes only the allowlisted `_site` artifact. Hidden production
-files are generated during deployment, so `.nojekyll`, `.well-known`, and
-`CNAME` do not need to be uploaded through GitHub's browser interface.
+The Google Business Profile ID is an account/support identifier, not a
+customer-facing URL. The public Google Business link remains in the website.

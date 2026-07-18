@@ -264,12 +264,22 @@ button, a { -webkit-tap-highlight-color: transparent; }
   max-width: 760px;
   margin: 0;
   color: #fff;
-  font-size: clamp(3.2rem, 6.1vw, 5rem);
+  font-size: clamp(2.8rem, 5.1vw, 4.55rem);
   font-weight: 900;
-  line-height: 0.95;
+  line-height: 0.99;
   letter-spacing: -0.062em;
 }
 .hero-title span { display: block; }
+
+.hero-tagline {
+  max-width: 700px;
+  margin: 20px 0 0;
+  color: rgba(255, 255, 255, 0.96);
+  font-size: clamp(1.05rem, 1.55vw, 1.28rem);
+  font-weight: 850;
+  letter-spacing: -0.015em;
+}
+
 .hero-subtitle {
   max-width: 660px;
   margin: 26px 0 0;
@@ -1260,17 +1270,13 @@ html.form-modal-open, body.form-modal-open { overflow: hidden !important; }
 
 
 
-/* v29-native-phone-status-google-direct-2026-07-17: native phone links with branded UI and no injected badges */
+/* Production phone links: native tel action and real selectable text */
 .phone-number-display {
   display: inline;
   color: inherit;
   font: inherit;
   letter-spacing: inherit;
   white-space: nowrap;
-}
-
-.phone-number-display::before {
-  content: "(804) 460-9640";
 }
 
 a[data-call-phone] {
@@ -1300,6 +1306,7 @@ a[data-call-phone] embed {
 
 a[data-call-phone]::before,
 a[data-call-phone]::after,
+a[data-call-phone] .phone-number-display::before,
 a[data-call-phone] .phone-number-display::after {
   content: none !important;
   display: none !important;
@@ -1336,13 +1343,37 @@ a.footer-phone-button:hover {
   gap: 22px;
   max-width: 1120px;
   margin-inline: auto;
-  padding: 18px 20px;
+  padding: 18px 60px 18px 20px;
   border: 1px solid rgba(18, 91, 169, 0.24);
   border-radius: 18px;
   background: rgba(247, 250, 253, 0.98);
-  color: var(--ink);
+  color: var(--text);
   box-shadow: 0 18px 48px rgba(2, 34, 64, 0.22);
   backdrop-filter: blur(10px);
+}
+
+
+.analytics-consent__close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid rgba(18, 91, 169, 0.2);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--navy-900);
+  cursor: pointer;
+  font-size: 1.55rem;
+  line-height: 1;
+}
+
+.analytics-consent__close:hover {
+  background: var(--surface-blue);
+  border-color: rgba(18, 91, 169, 0.38);
 }
 
 .analytics-consent__copy {
@@ -1352,13 +1383,13 @@ a.footer-phone-button:hover {
 }
 
 .analytics-consent__copy strong {
-  color: var(--navy);
+  color: var(--navy-900);
   font-size: 1rem;
 }
 
 .analytics-consent__copy a {
   width: fit-content;
-  color: var(--link);
+  color: var(--brand-blue);
   font-weight: 800;
 }
 

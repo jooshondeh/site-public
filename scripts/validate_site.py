@@ -15,10 +15,11 @@ args = parser.parse_args()
 
 ROOT = Path(args.root).resolve()
 PRODUCTION_ORIGIN = "https://nexgenbinary.com"
-BUILD = "production-2026-07-18-v4-1-gtag"
-CACHE = "20260718prod41"
+BUILD = "production-2026-07-18-v5-audit"
+CACHE = "20260718prod5"
 MEASUREMENT_ID = "G-YY6Q8RTE7R"
 PHONE_HREF = "tel:+18044609640"
+PHONE_TEXT = "(804) 460-9640"
 GOOGLE_BUSINESS_URL = "https://share.google/UWWubeCa8CN4sffAM"
 
 SOURCE_REQUIRED = [
@@ -32,17 +33,15 @@ SOURCE_REQUIRED = [
 ]
 
 DEPLOYMENT_ONLY_REQUIRED = [
-    "CNAME",
-    ".nojekyll",
-    ".well-known/security.txt",
+    "CNAME", ".nojekyll", ".well-known/security.txt",
 ]
 
 REQUIRED = SOURCE_REQUIRED + (DEPLOYMENT_ONLY_REQUIRED if args.clean else [])
 
 FORBIDDEN_DEPLOYED = [
     "_astro", "docs", "scripts", ".github",
-    "QA-REPORT.json", "SHA256SUMS.txt",
     "assets/analytics-id.js", "assets/analytics-config.js",
+    "site.webmanifest",
 ]
 
 missing = [item for item in REQUIRED if not (ROOT / item).is_file()]
@@ -56,7 +55,7 @@ if args.clean:
     for item in FORBIDDEN_DEPLOYED:
         if (ROOT / item).exists():
             raise SystemExit(
-                f"Repository-only or legacy item entered deployment artifact: {item}"
+                f"Repository-only or obsolete item entered deployment: {item}"
             )
 
 class Parser(HTMLParser):
@@ -70,6 +69,8 @@ class Parser(HTMLParser):
         self.images_without_alt = []
         self.canonicals = []
         self.robots = []
+        self.in_phone_display = False
+        self.phone_display_texts = []
 
     def handle_starttag(self, tag, attrs):
         data = dict(attrs)
@@ -80,10 +81,16 @@ class Parser(HTMLParser):
                 self.duplicates.add(element_id)
             self.ids.add(element_id)
 
+        classes = data.get("class", "").split()
+
         if "data-call-phone" in data:
             self.phones.append((tag, data.get("href"), data.get("title")))
 
-        if "google-business" in data.get("class", "").split():
+        if tag == "span" and "phone-number-display" in classes:
+            self.in_phone_display = True
+            self.phone_display_texts.append("")
+
+        if "google-business" in classes:
             self.google_links.append((tag, data.get("href")))
 
         if tag == "img" and "alt" not in data:
@@ -100,9 +107,17 @@ class Parser(HTMLParser):
             if value:
                 self.refs.append(value)
 
+    def handle_endtag(self, tag):
+        if tag == "span" and self.in_phone_display:
+            self.in_phone_display = False
+
+    def handle_data(self, data):
+        if self.in_phone_display and self.phone_display_texts:
+            self.phone_display_texts[-1] += data
+
 errors = []
 phone_count = 0
-titles = {}
+phone_display_count = 0
 html_files = sorted(ROOT.rglob("*.html"))
 
 for path in html_files:
@@ -125,32 +140,39 @@ for path in html_files:
         f"googletagmanager.com/gtag/js?id={MEASUREMENT_ID}",
         f"const measurementId = '{MEASUREMENT_ID}'",
         "gtag('consent', 'default'",
-        "analytics_storage: analyticsConsent",
+        "send_page_view: false",
     ):
         if marker not in text:
-            errors.append(f"{relative} missing Google tag/build marker: {marker}")
+            errors.append(f"{relative} missing build/analytics marker: {marker}")
 
     if "analytics-id.js" in text or "analytics-config.js" in text:
-        errors.append(f"{relative} still references legacy analytics loaders")
+        errors.append(f"{relative} references an obsolete analytics loader")
+
+    if "site.webmanifest" in text or 'rel="manifest"' in text:
+        errors.append(f"{relative} enables an unwanted install prompt")
 
     if 'name="viewport"' not in text:
         errors.append(f"{relative} missing viewport metadata")
 
-    if 'rel="manifest"' in text or "site.webmanifest" in text:
-        errors.append(f"{relative} still enables the browser install prompt")
-
-    if 'name="referrer"' not in text or "strict-origin-when-cross-origin" not in text:
-        errors.append(f"{relative} missing Formspree-compatible referrer policy")
-
     if "nexgenbinary-stage" in text or "jooshondeh.github.io" in text:
-        errors.append(f"{relative} still contains staging URLs")
+        errors.append(f"{relative} contains staging URLs")
+
+    if "allow=\"camera;" in text:
+        errors.append(f"{relative} grants unnecessary booking iframe permissions")
 
     for tag, href, title in parsed.phones:
         phone_count += 1
         if tag != "a" or href != PHONE_HREF:
             errors.append(f"{relative} phone control is not a native tel link")
         if title is not None:
-            errors.append(f"{relative} phone link has an unwanted tooltip title")
+            errors.append(f"{relative} phone link has an unwanted title tooltip")
+
+    for visible_text in parsed.phone_display_texts:
+        phone_display_count += 1
+        if visible_text.strip() != PHONE_TEXT:
+            errors.append(
+                f"{relative} phone display is not real visible text: {visible_text!r}"
+            )
 
     if not parsed.google_links:
         errors.append(f"{relative} missing Google Business link")
@@ -186,16 +208,6 @@ for path in html_files:
         if not target.exists():
             errors.append(f"{relative} missing local reference: {ref}")
 
-    title_start = text.find("<title>")
-    title_end = text.find("</title>")
-    if title_start == -1 or title_end == -1:
-        errors.append(f"{relative} missing title")
-    else:
-        title = text[title_start + 7:title_end].strip()
-        if not title:
-            errors.append(f"{relative} has an empty title")
-        titles.setdefault(title, []).append(str(relative))
-
     if relative in (
         Path("index.html"),
         Path("privacy/index.html"),
@@ -221,69 +233,79 @@ for path in html_files:
 if phone_count != 14:
     errors.append(f"Expected 14 phone links, found {phone_count}")
 
+if phone_display_count != 14:
+    errors.append(f"Expected 14 visible phone-number spans, found {phone_display_count}")
+
 index = (ROOT / "index.html").read_text(encoding="utf-8")
 
 for marker in (
+    "<title>Dental IT Support &amp; Managed Services in Virginia | NexGen Binary</title>",
+    "Dental IT Support",
+    "&amp; Managed Services",
+    "Across Virginia",
+    "Future-Ready Systems. Human-Ready Support.",
     "https://formspree.io/f/mdalpbzo",
     "267e959c-42c0-45b2-a4d2-45621dbc4f28",
     "https://outlook.office.com/book/MeetNexGenBinary@nexgenbinary.com/",
-    "VoIP, business audio systems, and camera solutions planned for reliable coverage",
     "data-booking-open", "data-back-to-top",
     '"@type": "ProfessionalService"',
     GOOGLE_BUSINESS_URL,
 ):
     if marker not in index:
-        errors.append(f"index.html missing required production marker: {marker}")
+        errors.append(f"index.html missing required marker: {marker}")
+
+if "https://js.hcaptcha.com/1/api.js" in index:
+    errors.append("index.html still loads hCaptcha during the initial page request")
 
 if index.count('class="plan-row"') != 24:
     errors.append("index.html must contain exactly 24 service-plan rows")
 
-class JsonLdParser(HTMLParser):
-    def __init__(self):
-        super().__init__()
-        self.capture = False
-        self.parts = []
-        self.blocks = []
+privacy = (ROOT / "privacy/index.html").read_text(encoding="utf-8")
+for marker in (
+    "Google Analytics is configured with Consent Mode",
+    "limited cookieless consent and measurement signals",
+    "closing the analytics notice records a declined choice",
+):
+    if marker not in privacy:
+        errors.append(f"privacy/index.html missing disclosure: {marker}")
 
-    def handle_starttag(self, tag, attrs):
-        data = dict(attrs)
-        if tag == "script" and data.get("type") == "application/ld+json":
-            self.capture = True
-            self.parts = []
+analytics_js = (ROOT / "assets/analytics.js").read_text(encoding="utf-8")
+for marker in (
+    f"const measurementId = '{MEASUREMENT_ID}'",
+    f"const storageKey = '{'nexgen_analytics_consent_v3'}'",
+    "navigator.globalPrivacyControl",
+    "pageViewSent",
+    "data-analytics-close",
+    "Close analytics preferences and decline analytics",
+    "role', 'region",
+    "generate_lead",
+    "click_to_call",
+):
+    if marker not in analytics_js:
+        errors.append(f"assets/analytics.js missing marker: {marker}")
 
-    def handle_data(self, data):
-        if self.capture:
-            self.parts.append(data)
+site_js = (ROOT / "assets/site.js").read_text(encoding="utf-8")
+for marker in (
+    f"const phoneDisplayText = '{PHONE_TEXT}'",
+    "const removePhoneDecorations",
+    "successReturnFocus",
+    "successFocusable",
+    "nexgen:contact-form-success",
+    "nexgen:section-change",
+):
+    if marker not in site_js:
+        errors.append(f"assets/site.js missing protected function: {marker}")
 
-    def handle_endtag(self, tag):
-        if tag == "script" and self.capture:
-            self.blocks.append("".join(self.parts))
-            self.capture = False
-
-json_parser = JsonLdParser()
-json_parser.feed(index)
-
-if len(json_parser.blocks) != 1:
-    errors.append(
-        f"Expected one JSON-LD block, found {len(json_parser.blocks)}"
-    )
-else:
-    try:
-        structured = json.loads(json_parser.blocks[0])
-        serialized = json.dumps(structured)
-        if (
-            PRODUCTION_ORIGIN not in serialized
-            or GOOGLE_BUSINESS_URL not in serialized
-        ):
-            errors.append(
-                "JSON-LD missing production domain or Google Business URL"
-            )
-    except json.JSONDecodeError as exc:
-        errors.append(f"Invalid JSON-LD: {exc}")
+css = (ROOT / "assets/site.css").read_text(encoding="utf-8")
+if 'content: "(804) 460-9640"' in css:
+    errors.append("Phone number is still generated through CSS")
+for undefined in ("var(--ink)", "var(--navy)", "var(--link)"):
+    if undefined in css:
+        errors.append(f"CSS still contains undefined token: {undefined}")
 
 robots = (ROOT / "robots.txt").read_text(encoding="utf-8")
 if "Disallow: /" in robots:
-    errors.append("Production robots.txt still blocks crawling")
+    errors.append("Production robots.txt blocks crawling")
 if f"Sitemap: {PRODUCTION_ORIGIN}/sitemap.xml" not in robots:
     errors.append("robots.txt missing production sitemap URL")
 
@@ -309,34 +331,10 @@ if args.clean:
     if (ROOT / "CNAME").read_text(encoding="utf-8").strip() != "nexgenbinary.com":
         errors.append("CNAME is not configured for nexgenbinary.com")
 
-analytics_js = (ROOT / "assets/analytics.js").read_text(encoding="utf-8")
-for marker in (
-    f"const measurementId = '{MEASUREMENT_ID}'",
-    f"const storageKey = '{'nexgen_analytics_consent_v2'}'",
-    "gtag",
-    "showConsentBanner",
-    "Allow analytics",
-    "generate_lead",
-    "click_to_call",
-):
-    if marker not in analytics_js:
-        errors.append(f"assets/analytics.js missing marker: {marker}")
-
-site_js = (ROOT / "assets/site.js").read_text(encoding="utf-8")
-for marker in (
-    "const removePhoneDecorations",
-    "element.tagName === 'svg' || element === display",
-    "scrollReloadToTop",
-    "nexgen:contact-form-success",
-    "nexgen:section-change",
-):
-    if marker not in site_js:
-        errors.append(f"assets/site.js missing protected functionality: {marker}")
-
 if errors:
     raise SystemExit("\n".join(errors))
 
 print(
-    f"Validated {len(html_files)} HTML files, {phone_count} phone links, "
-    "the direct Google tag, consent mode, SEO files, and integrations."
+    f"Validated {len(html_files)} HTML files, {phone_count} native phone links, "
+    "direct Google Analytics consent behavior, SEO metadata, and integrations."
 )

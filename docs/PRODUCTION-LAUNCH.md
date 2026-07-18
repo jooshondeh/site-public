@@ -1,36 +1,36 @@
-# Production deployment checklist
+# Production launch checklist
 
 ## GitHub Pages
 
-1. In **Settings → Pages**, choose **GitHub Actions** as the source.
-2. Set the custom domain to `nexgenbinary.com`.
-3. Enable **Enforce HTTPS** when available.
-4. The workflow must include `include-hidden-files: true` in the Pages upload
-   step. This package includes that correction.
+- Source: GitHub Actions
+- Custom domain: `nexgenbinary.com`
+- Enforce HTTPS: enabled
+- Workflow: `.github/workflows/static.yml`
 
-The workflow generates `CNAME`, `.nojekyll`, and
-`.well-known/security.txt` inside `_site`; do not upload those source files.
+## DNS
 
-## Analytics
+The Microsoft 365 DNS screenshots show the four required GitHub Pages A records
+and a `www` CNAME to `jooshondeh.github.io`. Keep the Microsoft 365 MX, SPF,
+Autodiscover, DKIM, mobility, SIP, and nameserver records.
 
-Analytics is optional and never blocks deployment. Follow
-`docs/ANALYTICS-SETUP.md` to create a GA4 web stream and add the repository
-variable.
+Recommended email-security follow-up:
 
-## External account checks
+1. Create a mailbox or reporting destination for DMARC aggregate reports.
+2. Add `_dmarc` as a TXT record.
+3. Start with `p=none`, review legitimate senders, then move gradually to
+   `quarantine` and finally `reject`.
 
-- Formspree **Restrict to Domain**: `nexgenbinary.com`
-- hCaptcha allowlisted hostname: `nexgenbinary.com`
-- Google Search Console: verify the domain and submit
-  `https://nexgenbinary.com/sitemap.xml`
+## Search
 
-## Post-deployment checks
+Submit:
 
-- Home, Privacy, Terms, Booking, and 404 pages
-- mobile navigation at phone and tablet widths
-- all phone links and email links
-- hCaptcha loading near the contact section
-- successful Formspree delivery
-- Microsoft Bookings modal and direct booking page
-- Google Business link
-- Realtime Analytics after consent, when configured
+    https://nexgenbinary.com/sitemap.xml
+
+to Google Search Console and Bing Webmaster Tools.
+
+## Integrations
+
+- Formspree: confirm the production domain restriction is `nexgenbinary.com`
+- hCaptcha: confirm the allowed hostname includes `nexgenbinary.com`
+- Microsoft Bookings: complete a real test booking
+- Google Analytics: verify `G-YY6Q8RTE7R` in Realtime

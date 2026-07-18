@@ -2,7 +2,12 @@
   'use strict';
 
   const measurementId = 'G-YY6Q8RTE7R';
-  const storageKey = 'nexgen_analytics_consent_v2';
+  const storageKey = 'nexgen_analytics_consent_v3';
+  const privacySignalDenied =
+    navigator.globalPrivacyControl === true ||
+    navigator.doNotTrack === '1' ||
+    window.doNotTrack === '1' ||
+    navigator.msDoNotTrack === '1';
 
   const getConsent = () => {
     try {
@@ -16,7 +21,7 @@
     try {
       window.localStorage.setItem(storageKey, value);
     } catch {
-      // The selected state still applies for this page when storage is blocked.
+      // The choice still applies for this page when storage is unavailable.
     }
   };
 
@@ -29,6 +34,7 @@
 
   let analyticsReady = false;
   let trackingAttached = false;
+  let pageViewSent = false;
 
   const sendEvent = (name, parameters = {}) => {
     if (!analyticsReady || typeof window.gtag !== 'function') return;
@@ -171,27 +177,32 @@
     window.addEventListener('pagehide', reportVitals, { once: true });
   };
 
-  const applyConsent = (value, sendCurrentPage = false) => {
+  const sendCurrentPage = () => {
+    if (pageViewSent || typeof window.gtag !== 'function') return;
+    pageViewSent = true;
+    window.gtag('event', 'page_view', {
+      page_title: document.title,
+      page_location: window.location.href,
+      page_path: `${window.location.pathname}${window.location.hash}`
+    });
+  };
+
+  const applyConsent = (value, shouldSendCurrentPage = false) => {
     if (typeof window.gtag !== 'function') return;
+
+    const granted = value === 'granted' && !privacySignalDenied;
 
     window.gtag(
       'consent',
       'update',
-      consentParameters(value === 'granted' ? 'granted' : 'denied')
+      consentParameters(granted ? 'granted' : 'denied')
     );
 
-    analyticsReady = value === 'granted';
+    analyticsReady = granted;
 
     if (analyticsReady) {
       attachEventTracking();
-
-      if (sendCurrentPage) {
-        window.gtag('event', 'page_view', {
-          page_title: document.title,
-          page_location: window.location.href,
-          page_path: `${window.location.pathname}${window.location.hash}`
-        });
-      }
+      if (shouldSendCurrentPage) sendCurrentPage();
     }
   };
 
@@ -200,8 +211,10 @@
   };
 
   const chooseConsent = (value) => {
-    setConsent(value);
-    applyConsent(value, value === 'granted');
+    const effectiveValue =
+      value === 'granted' && !privacySignalDenied ? 'granted' : 'denied';
+    setConsent(effectiveValue);
+    applyConsent(effectiveValue, effectiveValue === 'granted');
     removeBanner();
   };
 
@@ -215,10 +228,17 @@
     const banner = document.createElement('section');
     banner.className = 'analytics-consent';
     banner.dataset.analyticsConsent = '';
-    banner.setAttribute('aria-label', 'Analytics preferences');
+    banner.setAttribute('role', 'region');
+    banner.setAttribute('aria-labelledby', 'analytics-consent-title');
     banner.innerHTML = `
+      <button
+        type="button"
+        class="analytics-consent__close"
+        data-analytics-close
+        aria-label="Close analytics preferences and decline analytics"
+      >×</button>
       <div class="analytics-consent__copy">
-        <strong>Analytics preferences</strong>
+        <strong id="analytics-consent-title">Analytics preferences</strong>
         <span>
           Allow anonymous website analytics to help improve the site.
           Contact-form contents are never sent to Google Analytics.
@@ -245,6 +265,10 @@
 
     banner
       .querySelector('[data-analytics-decline]')
+      .addEventListener('click', () => chooseConsent('denied'));
+
+    banner
+      .querySelector('[data-analytics-close]')
       .addEventListener('click', () => chooseConsent('denied'));
 
     document.body.append(banner);
@@ -275,10 +299,16 @@
   document.addEventListener('DOMContentLoaded', () => {
     addSettingsLink();
 
+    if (privacySignalDenied) {
+      setConsent('denied');
+      applyConsent('denied');
+      return;
+    }
+
     const consent = getConsent();
 
     if (consent === 'granted') {
-      applyConsent('granted');
+      applyConsent('granted', true);
     } else if (consent === 'denied') {
       applyConsent('denied');
     } else {

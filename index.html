@@ -4,10 +4,10 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport"/>
-<title>NexGen Binary</title>
+<title>Dental IT Support &amp; Managed Services in Virginia | NexGen Binary</title>
 <meta content="#0b2f53" name="theme-color"/>
 <meta content="telephone=no, address=no, email=no" name="format-detection"/>
-<meta content="Dental-focused managed IT, cybersecurity, Microsoft 365, cloud, networking, backups, and responsive support for practices across Virginia." name="description"/><meta content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" name="robots"/><meta content="production-2026-07-18-v4-1-gtag" name="x-nexgen-build"/><meta content="website" property="og:type"/><meta content="NexGen Binary" property="og:site_name"/><meta content="en_US" property="og:locale"/><meta content="Dental IT Support &amp; Managed Services in Virginia | NexGen Binary" property="og:title"/><meta content="Dental-focused managed IT, cybersecurity, Microsoft 365, cloud, networking, backups, and responsive support for practices across Virginia." property="og:description"/><link href="https://nexgenbinary.com/" rel="canonical"/><meta content="https://nexgenbinary.com/" property="og:url"/><meta content="https://nexgenbinary.com/social-preview.png" property="og:image"/><meta content="https://nexgenbinary.com/social-preview.png" property="og:image:secure_url"/><meta content="image/png" property="og:image:type"/><meta content="1200" property="og:image:width"/><meta content="630" property="og:image:height"/><meta content="NexGen Binary — managed IT for dental practices across Virginia" property="og:image:alt"/><meta content="summary_large_image" name="twitter:card"/><meta content="Dental IT Support &amp; Managed Services in Virginia | NexGen Binary" name="twitter:title"/><meta content="Dental-focused managed IT, cybersecurity, Microsoft 365, cloud, networking, backups, and responsive support for practices across Virginia." name="twitter:description"/><meta content="https://nexgenbinary.com/social-preview.png" name="twitter:image"/><link href="./favicon.ico?v=20260718prod1" rel="shortcut icon"/><link href="./favicon-16x16.png?v=20260718prod1" rel="icon" sizes="16x16" type="image/png"/><link href="./favicon-32x32.png?v=20260718prod1" rel="icon" sizes="32x32" type="image/png"/><link href="./favicon.svg?v=20260718prod1" rel="icon" type="image/svg+xml"/><link href="./apple-touch-icon.png?v=20260718prod1" rel="apple-touch-icon" sizes="180x180"/><link href="./assets/site.css?v=20260718prod41" rel="stylesheet"/><script type="application/ld+json">{
+<meta content="Dental-focused managed IT, cybersecurity, Microsoft 365, cloud, networking, backups, and responsive support for practices across Virginia." name="description"/><meta content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" name="robots"/><meta content="production-2026-07-18-v5-audit" name="x-nexgen-build"/><meta content="website" property="og:type"/><meta content="NexGen Binary" property="og:site_name"/><meta content="en_US" property="og:locale"/><meta content="Dental IT Support &amp; Managed Services in Virginia | NexGen Binary" property="og:title"/><meta content="Dental-focused managed IT, cybersecurity, Microsoft 365, cloud, networking, backups, and responsive support for practices across Virginia." property="og:description"/><link href="https://nexgenbinary.com/" rel="canonical"/><meta content="https://nexgenbinary.com/" property="og:url"/><meta content="https://nexgenbinary.com/social-preview.png" property="og:image"/><meta content="https://nexgenbinary.com/social-preview.png" property="og:image:secure_url"/><meta content="image/png" property="og:image:type"/><meta content="1200" property="og:image:width"/><meta content="630" property="og:image:height"/><meta content="NexGen Binary — managed IT for dental practices across Virginia" property="og:image:alt"/><meta content="summary_large_image" name="twitter:card"/><meta content="Dental IT Support &amp; Managed Services in Virginia | NexGen Binary" name="twitter:title"/><meta content="Dental-focused managed IT, cybersecurity, Microsoft 365, cloud, networking, backups, and responsive support for practices across Virginia." name="twitter:description"/><meta content="https://nexgenbinary.com/social-preview.png" name="twitter:image"/><link href="./favicon.ico?v=20260718prod1" rel="shortcut icon"/><link href="./favicon-16x16.png?v=20260718prod1" rel="icon" sizes="16x16" type="image/png"/><link href="./favicon-32x32.png?v=20260718prod1" rel="icon" sizes="32x32" type="image/png"/><link href="./favicon.svg?v=20260718prod1" rel="icon" type="image/svg+xml"/><link href="./apple-touch-icon.png?v=20260718prod1" rel="apple-touch-icon" sizes="180x180"/><link href="./assets/site.css?v=20260718prod5" rel="stylesheet"/><script type="application/ld+json">{
   "@context": "https://schema.org",
   "@graph": [
     {
@@ -153,9 +153,14 @@
   'use strict';
 
   const measurementId = 'G-YY6Q8RTE7R';
-  const consentKey = 'nexgen_analytics_consent_v2';
-  let storedConsent = null;
+  const consentKey = 'nexgen_analytics_consent_v3';
+  const privacySignalDenied =
+    navigator.globalPrivacyControl === true ||
+    navigator.doNotTrack === '1' ||
+    window.doNotTrack === '1' ||
+    navigator.msDoNotTrack === '1';
 
+  let storedConsent = null;
   try {
     storedConsent = window.localStorage.getItem(consentKey);
   } catch {
@@ -163,7 +168,9 @@
   }
 
   const analyticsConsent =
-    storedConsent === 'granted' ? 'granted' : 'denied';
+    !privacySignalDenied && storedConsent === 'granted'
+      ? 'granted'
+      : 'denied';
 
   window.NEXGEN_GA4_MEASUREMENT_ID = measurementId;
   window.dataLayer = window.dataLayer || [];
@@ -183,10 +190,10 @@
   window.gtag('config', measurementId, {
     allow_google_signals: false,
     allow_ad_personalization_signals: false,
-    send_page_view: true
+    send_page_view: false
   });
 })();</script><script async="" data-nexgen-gtag-source="" src="https://www.googletagmanager.com/gtag/js?id=G-YY6Q8RTE7R"></script></head>
-<body data-nexgen-build="production-2026-07-18-v4-1-gtag">
+<body data-nexgen-build="production-2026-07-18-v5-audit">
 <a class="skip-link" href="#main-content">Skip to main content</a>
 <header class="site-header" data-site-header="">
 <div class="site-shell header-inner">
@@ -212,7 +219,7 @@
 <div class="header-actions">
 <a aria-label="Call NexGen Binary at eight zero four, four six zero, nine six four zero" class="button button-primary header-call" data-call-phone="" href="tel:+18044609640">
 <svg aria-hidden="true" viewbox="0 0 24 24"><path d="M6.6 10.8a15.4 15.4 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.24 11 11 0 0 0 3.44.55 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.85 21 3 13.15 3 3.5a1 1 0 0 1 1-1H7.5a1 1 0 0 1 1 1c0 1.19.19 2.34.55 3.44a1 1 0 0 1-.24 1l-2.2 2.86Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.9"></path></svg>
-<span aria-hidden="true" class="phone-number-display"></span>
+<span class="phone-number-display">(804) 460-9640</span>
 </a>
 </div>
 </nav>
@@ -223,7 +230,7 @@
 <div class="site-shell hero-inner">
 <div class="hero-copy">
 <p class="eyebrow">Dental-focused managed IT across Virginia</p>
-<h1 class="hero-title"><span>Future-Ready</span><span>Systems.</span><span>Human-Ready</span><span>Support.</span></h1>
+<h1 class="hero-title"><span>Dental IT Support</span><span>&amp; Managed Services</span><span>Across Virginia</span></h1><p class="hero-tagline">Future-Ready Systems. Human-Ready Support.</p>
 <p class="hero-subtitle">Managed IT, cybersecurity, Microsoft 365, networking, and vendor coordination for Virginia dental practices—delivered remotely and on-site.</p>
 <div class="hero-actions">
 <a class="button button-primary" data-booking-open="" href="https://outlook.office.com/book/MeetNexGenBinary@nexgenbinary.com/" rel="noopener" target="_blank">
@@ -232,7 +239,7 @@
             </a>
 <a aria-label="Call NexGen Binary at eight zero four, four six zero, nine six four zero" class="button button-ghost" data-call-phone="" href="tel:+18044609640">
 <svg aria-hidden="true" viewbox="0 0 24 24"><path d="M6.6 4.5h3.1l1.1 4.4-2 1.3a13 13 0 0 0 6.1 6.1l1.3-2 4.4 1.1v3.1a1.8 1.8 0 0 1-1.8 1.8C10.3 20.3 3.7 13.7 3.7 6.3a1.8 1.8 0 0 1 1.8-1.8Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.7"></path></svg>
-<span aria-hidden="true" class="phone-number-display"></span>
+<span class="phone-number-display">(804) 460-9640</span>
 </a>
 </div>
 </div>
@@ -461,7 +468,7 @@
 <ul class="contact-list">
 <li class="contact-item">
 <div class="icon-tile"><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M6.6 4.5h3.1l1.1 4.4-2 1.3a13 13 0 0 0 6.1 6.1l1.3-2 4.4 1.1v3.1a1.8 1.8 0 0 1-1.8 1.8C10.3 20.3 3.7 13.7 3.7 6.3a1.8 1.8 0 0 1 1.8-1.8Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.7"></path></svg></div>
-<div><div class="contact-label">Call or text</div><a aria-label="Call NexGen Binary at eight zero four, four six zero, nine six four zero" class="contact-value phone-text-button" data-call-phone="" href="tel:+18044609640"><span aria-hidden="true" class="phone-number-display"></span></a></div>
+<div><div class="contact-label">Call or text</div><a aria-label="Call NexGen Binary at eight zero four, four six zero, nine six four zero" class="contact-value phone-text-button" data-call-phone="" href="tel:+18044609640"><span class="phone-number-display">(804) 460-9640</span></a></div>
 </li>
 <li class="contact-item">
 <div class="icon-tile"><svg aria-hidden="true" viewbox="0 0 24 24"><rect fill="none" height="14" rx="2" stroke="currentColor" stroke-width="1.8" width="18" x="3" y="5"></rect><path d="M4 7l8 6 8-6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path></svg></div>
@@ -534,7 +541,7 @@
 <div>
 <h2 class="footer-heading">Contact</h2>
 <ul class="footer-list">
-<li><a aria-label="Call NexGen Binary at eight zero four, four six zero, nine six four zero" class="footer-phone-button" data-call-phone="" href="tel:+18044609640"><span aria-hidden="true" class="phone-number-display"></span></a></li>
+<li><a aria-label="Call NexGen Binary at eight zero four, four six zero, nine six four zero" class="footer-phone-button" data-call-phone="" href="tel:+18044609640"><span class="phone-number-display">(804) 460-9640</span></a></li>
 <li><a href="mailto:info@nexgenbinary.com">info@nexgenbinary.com</a></li>
 <li><address class="footer-address">11357 Nuckols Rd<br/>Glen Allen, VA 23059</address></li>
 <li class="footer-service-area"><span>Serving practices across Virginia</span><a aria-label="View NexGen Binary LLC on Google" class="google-business footer-google-business" href="https://share.google/UWWubeCa8CN4sffAM" rel="noopener noreferrer" target="_blank" title="NexGen Binary LLC on Google">
@@ -580,7 +587,7 @@
 </div>
 </header>
 <div class="nb-booking-body">
-<iframe allow="camera; microphone; geolocation; clipboard-read; clipboard-write" data-src="https://outlook.office.com/book/MeetNexGenBinary@nexgenbinary.com/" id="nb-booking-iframe" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" title="NexGen Binary consultation booking"></iframe>
+<iframe data-src="https://outlook.office.com/book/MeetNexGenBinary@nexgenbinary.com/" id="nb-booking-iframe" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" title="NexGen Binary consultation booking"></iframe>
 </div>
 </section>
 </div>
@@ -589,5 +596,5 @@
 <path d="M6 14.5 12 8l6 6.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2"></path>
 </svg>
 </button>
-<script async="" defer="" src="https://js.hcaptcha.com/1/api.js"></script><script defer="" src="./assets/analytics.js?v=20260718prod41"></script><script defer="" src="./assets/site.js?v=20260718prod41"></script></body>
+<script defer="" src="./assets/analytics.js?v=20260718prod5"></script><script defer="" src="./assets/site.js?v=20260718prod5"></script></body>
 </html>
