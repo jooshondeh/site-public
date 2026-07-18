@@ -1,0 +1,4 @@
+Contact: mailto:info@nexgenbinary.com
+Expires: 2027-07-18T23:59:59Z
+Preferred-Languages: en
+Canonical: https://nexgenbinary.com/.well-known/security.txt
