@@ -18,9 +18,8 @@ CACHE = "20260718prod2"
 PHONE_HREF = "tel:+18044609640"
 GOOGLE_BUSINESS_URL = "https://share.google/UWWubeCa8CN4sffAM"
 
-REQUIRED = [
+SOURCE_REQUIRED = [
     "index.html", "404.html", "robots.txt", "sitemap.xml",
-    "CNAME", ".nojekyll", ".well-known/security.txt",
     "assets/site.css", "assets/site.js",
     "assets/analytics-id.js", "assets/analytics-config.js", "assets/analytics.js",
     "book/index.html", "privacy/index.html", "terms/index.html",
@@ -29,6 +28,14 @@ REQUIRED = [
     "favicon-32x32.png", "favicon-192x192.png",
     "favicon-512x512.png", "apple-touch-icon.png",
 ]
+
+DEPLOYMENT_ONLY_REQUIRED = [
+    "CNAME",
+    ".nojekyll",
+    ".well-known/security.txt",
+]
+
+REQUIRED = SOURCE_REQUIRED + (DEPLOYMENT_ONLY_REQUIRED if args.clean else [])
 
 FORBIDDEN_DEPLOYED = [
     "_astro", "docs", "scripts", ".github",
@@ -292,8 +299,9 @@ try:
 except ET.ParseError as exc:
     errors.append(f"Invalid sitemap.xml: {exc}")
 
-if (ROOT / "CNAME").read_text(encoding="utf-8").strip() != "nexgenbinary.com":
-    errors.append("CNAME is not configured for nexgenbinary.com")
+if args.clean:
+    if (ROOT / "CNAME").read_text(encoding="utf-8").strip() != "nexgenbinary.com":
+        errors.append("CNAME is not configured for nexgenbinary.com")
 
 analytics_id = (ROOT / "assets/analytics-id.js").read_text(encoding="utf-8")
 analytics_config = (ROOT / "assets/analytics-config.js").read_text(encoding="utf-8")
