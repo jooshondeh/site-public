@@ -37,9 +37,18 @@ FORBIDDEN_DEPLOYED = [
     "assets/analytics-id.js", "site.webmanifest", "_astro",
 ]
 
-for item in REQUIRED:
-    if not (ROOT / item).is_file():
-        raise SystemExit(f"Missing required file: {item}")
+missing_required = [
+    item for item in REQUIRED
+    if not (ROOT / item).is_file()
+]
+if missing_required:
+    formatted = "\n".join(f"  - {item}" for item in missing_required)
+    raise SystemExit(
+        "Missing required website files:\n"
+        + formatted
+        + "\n\nFor assets/analytics-config.js, use the corrected workflow. "
+          "It generates that file before source validation."
+    )
 
 if args.clean:
     for item in FORBIDDEN_DEPLOYED:
