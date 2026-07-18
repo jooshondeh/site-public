@@ -1,7 +1,28 @@
-// The deployment workflow injects the GitHub repository variable GA4_MEASUREMENT_ID.
-// Expected format: G-ABC123DE45
-window.NEXGEN_ANALYTICS_CONFIG = Object.freeze({
-  googleAnalyticsMeasurementId: String(window.NEXGEN_GA4_MEASUREMENT_ID || '').trim(),
-  requireConsent: true,
-  respectDoNotTrack: true
-});
+(() => {
+  'use strict';
+
+  const measurementId = '';
+  window.NEXGEN_ANALYTICS_CONFIG = Object.freeze({
+    googleAnalyticsMeasurementId: measurementId,
+    requireConsent: true,
+    respectDoNotTrack: true
+  });
+
+  if (!/^G-[A-Z0-9]+$/i.test(measurementId)) return;
+
+  const currentScript = document.currentScript;
+  const loadAnalytics = () => {
+    if (document.querySelector('script[data-nexgen-analytics-loader]')) return;
+    const script = document.createElement('script');
+    script.async = true;
+    script.dataset.nexgenAnalyticsLoader = '';
+    script.src = new URL('analytics.js?v=20260718prod3', currentScript?.src || document.baseURI).href;
+    document.head.append(script);
+  };
+
+  if ('requestIdleCallback' in window) {
+    window.requestIdleCallback(loadAnalytics, { timeout: 1600 });
+  } else {
+    window.setTimeout(loadAnalytics, 0);
+  }
+})();

@@ -1406,3 +1406,37 @@ a.footer-phone-button:hover {
     flex-direction: column-reverse;
   }
 }
+
+
+/* production-2026-07-18-v3: deferred hCaptcha and small performance refinements */
+.h-captcha[data-hcaptcha-lazy] {
+  display: grid;
+  place-items: center;
+  min-height: 74px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.h-captcha[data-hcaptcha-lazy][aria-busy="true"] .captcha-load-status::before {
+  content: "";
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  margin-right: 8px;
+  border: 2px solid rgba(18, 91, 169, 0.25);
+  border-top-color: var(--brand-blue);
+  border-radius: 50%;
+  vertical-align: -0.1em;
+  animation: nexgen-spin 800ms linear infinite;
+}
+
+@keyframes nexgen-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .h-captcha[data-hcaptcha-lazy][aria-busy="true"] .captcha-load-status::before {
+    animation: none;
+  }
+}

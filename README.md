@@ -1,22 +1,14 @@
 # NexGen Binary public website
 
-Production website repository for **NexGen Binary LLC**.
+Production repository for **NexGen Binary LLC**.
 
-- Production domain: `https://nexgenbinary.com`
-- GitHub repository: `jooshondeh/site-public`
-- Deployment: GitHub Pages through `.github/workflows/static.yml`
+- Website: `https://nexgenbinary.com`
+- Repository: `jooshondeh/site-public`
+- Deployment: `.github/workflows/static.yml`
 - Contact form: Formspree + hCaptcha
 - Scheduling: Microsoft Bookings
-- Google Business: https://share.google/UWWubeCa8CN4sffAM
+- Analytics: optional GA4; deployment succeeds whether configured or not
 
-The deployment workflow publishes only the clean `_site` artifact. Repository
-documentation, validation scripts, and workflow files are not exposed as public
-website pages.
-
-See `docs/PRODUCTION-LAUNCH.md` before publishing.
-
-## Analytics
-
-Set the GitHub Actions repository variable `GA4_MEASUREMENT_ID` to the real GA4 `G-` ID, then rerun the Pages workflow. See `docs/ANALYTICS-SETUP.md`.
-
-The site intentionally has no web-app manifest, so browsers do not offer an unnecessary “Install NexGen Binary” PWA prompt.
+The workflow publishes only the allowlisted `_site` artifact. Hidden production
+files are generated during deployment, so `.nojekyll`, `.well-known`, and
+`CNAME` do not need to be uploaded through GitHub's browser interface.

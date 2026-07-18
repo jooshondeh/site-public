@@ -254,9 +254,31 @@
     });
   }
 
+  const warmExternalOrigin = (url) => {
+    try {
+      const origin = new URL(url, document.baseURI).origin;
+      if (document.querySelector(`link[data-preconnect-origin="${origin}"]`)) return;
+      const link = document.createElement('link');
+      link.rel = 'preconnect';
+      link.href = origin;
+      link.crossOrigin = 'anonymous';
+      link.dataset.preconnectOrigin = origin;
+      document.head.append(link);
+    } catch {
+      // Ignore invalid external URLs.
+    }
+  };
+
   const bookingModal = document.getElementById('nb-booking-modal');
   const bookingFrame = document.getElementById('nb-booking-iframe');
   const bookingOpeners = Array.from(document.querySelectorAll('[data-booking-open]'));
+  bookingOpeners.forEach((opener) => {
+    const bookingUrl = opener.getAttribute('href') || '';
+    const warm = () => warmExternalOrigin(bookingUrl);
+    opener.addEventListener('pointerenter', warm, { once: true, passive: true });
+    opener.addEventListener('focus', warm, { once: true });
+    opener.addEventListener('touchstart', warm, { once: true, passive: true });
+  });
   const bookingClosers = bookingModal ? Array.from(bookingModal.querySelectorAll('[data-booking-close]')) : [];
   let bookingReturnFocus = null;
 
@@ -331,6 +353,105 @@
     const requiredFields = Array.from(form.querySelectorAll('[required]'));
     const endpoint = form.getAttribute('action') || form.dataset.formspreeEndpoint || '';
 
+    const captchaWidget = form.querySelector('[data-hcaptcha-lazy]');
+    const captchaLoadStatus = captchaWidget?.querySelector('[data-hcaptcha-load-status]');
+    const captchaSitekey = captchaWidget?.dataset.sitekey || '';
+    let captchaWidgetId = null;
+    let captchaLoadPromise = null;
+
+    const setCaptchaLoadStatus = (message, busy = false) => {
+      if (captchaWidget) captchaWidget.setAttribute('aria-busy', busy ? 'true' : 'false');
+      if (captchaLoadStatus?.isConnected) captchaLoadStatus.textContent = message;
+    };
+
+    const renderHCaptcha = () => {
+      if (!captchaWidget || captchaWidgetId !== null) return captchaWidgetId;
+      if (!window.hcaptcha?.render || !captchaSitekey) {
+        throw new Error('Verification could not initialize.');
+      }
+
+      captchaWidget.replaceChildren();
+      captchaWidget.setAttribute('aria-busy', 'false');
+      captchaWidgetId = window.hcaptcha.render(captchaWidget, {
+        sitekey: captchaSitekey,
+        size: window.matchMedia('(max-width: 380px)').matches ? 'compact' : 'normal',
+        theme: 'light',
+        'error-callback': () => {
+          if (captchaError) captchaError.textContent = 'Verification encountered an error. Please retry or email us directly.';
+        },
+        'expired-callback': () => {
+          if (captchaError) captchaError.textContent = 'Verification expired. Please complete it again.';
+        }
+      });
+      return captchaWidgetId;
+    };
+
+    const loadHCaptcha = () => {
+      if (!captchaWidget) return Promise.resolve(null);
+      if (captchaWidgetId !== null) return Promise.resolve(captchaWidgetId);
+      if (window.hcaptcha?.render) return Promise.resolve(renderHCaptcha());
+      if (captchaLoadPromise) return captchaLoadPromise;
+
+      setCaptchaLoadStatus('Loading verification…', true);
+      captchaLoadPromise = new Promise((resolve, reject) => {
+        const callbackName = 'nexgenHCaptchaReady';
+        const existingScript = document.querySelector('script[data-nexgen-hcaptcha]');
+
+        window[callbackName] = () => {
+          try {
+            resolve(renderHCaptcha());
+          } catch (error) {
+            captchaLoadPromise = null;
+            reject(error);
+          } finally {
+            try { delete window[callbackName]; } catch {}
+          }
+        };
+
+        if (existingScript) return;
+
+        const script = document.createElement('script');
+        script.async = true;
+        script.defer = true;
+        script.dataset.nexgenHcaptcha = '';
+        script.src = `https://js.hcaptcha.com/1/api.js?onload=${callbackName}&render=explicit&recaptchacompat=off`;
+        script.onerror = () => {
+          captchaLoadPromise = null;
+          script.remove();
+          setCaptchaLoadStatus('Verification could not load. Please retry or email us directly.', false);
+          reject(new Error('Verification could not load.'));
+        };
+        document.head.append(script);
+      });
+
+      return captchaLoadPromise;
+    };
+
+    const requestCaptchaLoad = () => {
+      loadHCaptcha().catch((error) => {
+        console.error('hCaptcha failed to load:', error);
+        if (captchaError) captchaError.textContent = 'Verification could not load. Please retry or email us directly.';
+      });
+    };
+
+    if (captchaWidget) {
+      if ('IntersectionObserver' in window) {
+        const observer = new IntersectionObserver((entries) => {
+          if (!entries.some((entry) => entry.isIntersecting)) return;
+          observer.disconnect();
+          requestCaptchaLoad();
+        }, { rootMargin: '650px 0px' });
+        observer.observe(captchaWidget);
+      } else {
+        window.setTimeout(requestCaptchaLoad, 1200);
+      }
+
+      form.addEventListener('focusin', requestCaptchaLoad, { once: true });
+      form.addEventListener('pointerdown', requestCaptchaLoad, { once: true, passive: true });
+      form.addEventListener('touchstart', requestCaptchaLoad, { once: true, passive: true });
+    }
+
+
     const setStatus = (message, type = 'neutral') => {
       if (!status) return;
       status.textContent = message;
@@ -401,23 +522,34 @@
         return;
       }
 
-      const data = new FormData(form);
-      if (String(data.get('_gotcha') || '').trim()) {
+      const honeypot = String(form.querySelector('[name="_gotcha"]')?.value || '').trim();
+      if (honeypot) {
         form.reset();
         openSuccess();
         return;
       }
 
-      const captchaWidget = form.querySelector('.h-captcha');
-      const captchaToken = String(data.get('h-captcha-response') || '').trim();
-      if (captchaWidget && !captchaToken) {
-        if (captchaError) captchaError.textContent = 'Complete the verification before sending.';
-        setStatus('Please complete the verification before sending.', 'error');
-        captchaWidget.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        return;
+      if (captchaWidget) {
+        try {
+          await loadHCaptcha();
+        } catch {
+          if (captchaError) captchaError.textContent = 'Verification could not load. Please retry or email us directly.';
+          setStatus('Verification could not load. Please retry or email us directly.', 'error');
+          captchaWidget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return;
+        }
+
+        const captchaToken = String(window.hcaptcha?.getResponse(captchaWidgetId) || '').trim();
+        if (!captchaToken) {
+          if (captchaError) captchaError.textContent = 'Complete the verification before sending.';
+          setStatus('Please complete the verification before sending.', 'error');
+          captchaWidget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return;
+        }
       }
       if (captchaError) captchaError.textContent = '';
 
+      const data = new FormData(form);
       data.set('_replyto', String(data.get('email') || ''));
       data.set('_subject', 'New website message from NexGen Binary LLC');
 
@@ -444,7 +576,7 @@
           if (error) error.textContent = '';
         });
         if (window.hcaptcha?.reset) {
-          try { window.hcaptcha.reset(); } catch {}
+          try { window.hcaptcha.reset(captchaWidgetId); } catch {}
         }
         setStatus('', 'neutral');
         openSuccess();

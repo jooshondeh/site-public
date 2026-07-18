@@ -1,47 +1,32 @@
-# Priority production account settings
+# External account settings
 
-These settings live in private third-party dashboards and cannot be changed or
-proven by a static ZIP package. The website files are configured to support them.
+These settings cannot be changed by repository files.
 
-## 1. Public domain and GitHub Pages
+## Formspree
 
-- Repository: `jooshondeh/site-public`
-- GitHub Pages source: **GitHub Actions**
-- Custom domain: `nexgenbinary.com`
-- Enforce HTTPS: enabled after the certificate is issued
-- Apex DNS A records: GitHub Pages addresses
-- `www` CNAME: `jooshondeh.github.io`
+In the Formspree project/form settings, restrict submissions to the bare domain:
 
-After deployment, run:
-
-```bash
-python3 scripts/check_live_site.py
+```
+nexgenbinary.com
 ```
 
-The script checks HTTPS, the production title, robots.txt, sitemap.xml, phone
-links, analytics assets, Formspree markup, and hCaptcha markup.
+Then submit a real production test and confirm delivery to
+`info@nexgenbinary.com`.
 
-## 2. Formspree
+## hCaptcha
 
-In the Formspree project containing `https://formspree.io/f/mdalpbzo`:
+For site key `267e959c-42c0-45b2-a4d2-45621dbc4f28`, enable domain
+allowlisting and add:
 
-- Open **Settings**.
-- Set **Restrict to Domain** to `nexgenbinary.com` without `https://` or `www`.
-- Submit one real test message from the production Contact form.
-- Confirm it reaches the expected inbox and is not placed in Formspree spam.
+```
+nexgenbinary.com
+```
 
-The website now explicitly uses the `strict-origin-when-cross-origin` referrer
-policy, which preserves the origin information required by domain restriction.
+The website now loads hCaptcha only when the contact form approaches the
+viewport or the visitor interacts with the form.
 
-## 3. hCaptcha
+## GitHub Pages
 
-For site key `267e959c-42c0-45b2-a4d2-45621dbc4f28`:
-
-- Open the hCaptcha dashboard.
-- Enable Domain Allowlisting.
-- Add the bare hostname `nexgenbinary.com`.
-- A bare hostname covers `www.nexgenbinary.com` and other subdomains.
-- Save, then complete a real form submission from production.
-
-If the allowlist is disabled or empty, hCaptcha works on any domain; the secure
-production setting is to enable it and add `nexgenbinary.com`.
+Set the source to GitHub Actions, configure `nexgenbinary.com` as the custom
+domain, and enable HTTPS. The source repository does not need dot-prefixed
+production files because the workflow generates them.
