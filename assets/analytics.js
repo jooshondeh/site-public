@@ -1,17 +1,8 @@
 (() => {
   'use strict';
 
-  const config = window.NEXGEN_ANALYTICS_CONFIG || {};
-  const measurementId = String(config.googleAnalyticsMeasurementId || '').trim();
-
-  if (!/^G-[A-Z0-9]+$/i.test(measurementId)) return;
-
-  const storageKey = 'nexgen_analytics_consent_v1';
-  const respectsDnt = config.respectDoNotTrack !== false;
-  const dntEnabled =
-    navigator.doNotTrack === '1' ||
-    window.doNotTrack === '1' ||
-    navigator.msDoNotTrack === '1';
+  const measurementId = 'G-WWCZJ4MDGN';
+  const storageKey = 'nexgen_analytics_consent_v2';
 
   const getConsent = () => {
     try {
@@ -25,11 +16,19 @@
     try {
       window.localStorage.setItem(storageKey, value);
     } catch {
-      // Analytics can still work for this session if storage is unavailable.
+      // The selected state still applies for this page when storage is blocked.
     }
   };
 
+  const consentParameters = (analyticsValue) => ({
+    analytics_storage: analyticsValue,
+    ad_storage: 'denied',
+    ad_user_data: 'denied',
+    ad_personalization: 'denied'
+  });
+
   let analyticsReady = false;
+  let trackingAttached = false;
 
   const sendEvent = (name, parameters = {}) => {
     if (!analyticsReady || typeof window.gtag !== 'function') return;
@@ -46,6 +45,9 @@
   };
 
   const attachEventTracking = () => {
+    if (trackingAttached) return;
+    trackingAttached = true;
+
     document.querySelectorAll('a[data-call-phone]').forEach((link) => {
       link.addEventListener('click', () => {
         sendEvent('click_to_call', { link_location: locationName(link) });
@@ -58,15 +60,21 @@
       });
     });
 
-    document.querySelectorAll('[data-booking-open], a[href*="outlook.office.com/book/"]').forEach((link) => {
-      link.addEventListener('click', () => {
-        sendEvent('booking_click', { link_location: locationName(link) });
+    document
+      .querySelectorAll(
+        '[data-booking-open], a[href*="outlook.office.com/book/"]'
+      )
+      .forEach((link) => {
+        link.addEventListener('click', () => {
+          sendEvent('booking_click', { link_location: locationName(link) });
+        });
       });
-    });
 
     document.querySelectorAll('a.google-business').forEach((link) => {
       link.addEventListener('click', () => {
-        sendEvent('google_business_click', { link_location: locationName(link) });
+        sendEvent('google_business_click', {
+          link_location: locationName(link)
+        });
       });
     });
 
@@ -77,7 +85,7 @@
         if (started) return;
         started = true;
         sendEvent('contact_form_start');
-      }, { once: true });
+      });
     }
 
     window.addEventListener('nexgen:contact-form-success', () => {
@@ -90,7 +98,9 @@
 
     window.addEventListener('nexgen:section-change', (event) => {
       const sectionId = event.detail?.sectionId;
-      if (sectionId) sendEvent('section_view', { section_id: sectionId });
+      if (sectionId) {
+        sendEvent('section_view', { section_id: sectionId });
+      }
     });
 
     const reached = new Set();
@@ -100,7 +110,10 @@
         document.documentElement.scrollHeight
       );
       const viewportBottom = window.scrollY + window.innerHeight;
-      const percentage = Math.min(100, Math.round((viewportBottom / documentHeight) * 100));
+      const percentage = Math.min(
+        100,
+        Math.round((viewportBottom / documentHeight) * 100)
+      );
 
       [25, 50, 75, 90].forEach((threshold) => {
         if (percentage >= threshold && !reached.has(threshold)) {
@@ -109,11 +122,12 @@
         }
       });
     };
+
     window.addEventListener('scroll', trackScroll, { passive: true });
     trackScroll();
 
-    // Lightweight Core Web Vitals reporting without an external library.
     const vitals = {};
+
     const reportVitals = () => {
       Object.entries(vitals).forEach(([metricName, value]) => {
         sendEvent('web_vital', {
@@ -147,35 +161,38 @@
         list.getEntries().forEach((entry) => {
           vitals.INP = Math.max(vitals.INP || 0, entry.duration || 0);
         });
-      }).observe({ type: 'event', durationThreshold: 40, buffered: true });
+      }).observe({
+        type: 'event',
+        durationThreshold: 40,
+        buffered: true
+      });
     } catch {}
 
     window.addEventListener('pagehide', reportVitals, { once: true });
   };
 
-  const loadAnalytics = () => {
-    if (analyticsReady) return;
+  const applyConsent = (value, sendCurrentPage = false) => {
+    if (typeof window.gtag !== 'function') return;
 
-    window.dataLayer = window.dataLayer || [];
-    window.gtag = function gtag() {
-      window.dataLayer.push(arguments);
-    };
+    window.gtag(
+      'consent',
+      'update',
+      consentParameters(value === 'granted' ? 'granted' : 'denied')
+    );
 
-    window.gtag('js', new Date());
-    window.gtag('config', measurementId, {
-      allow_google_signals: false,
-      allow_ad_personalization_signals: false,
-      send_page_view: true
-    });
+    analyticsReady = value === 'granted';
 
-    const script = document.createElement('script');
-    script.async = true;
-    script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(measurementId)}`;
-    script.onload = () => {
-      analyticsReady = true;
+    if (analyticsReady) {
       attachEventTracking();
-    };
-    document.head.append(script);
+
+      if (sendCurrentPage) {
+        window.gtag('event', 'page_view', {
+          page_title: document.title,
+          page_location: window.location.href,
+          page_path: `${window.location.pathname}${window.location.hash}`
+        });
+      }
+    }
   };
 
   const removeBanner = () => {
@@ -184,16 +201,16 @@
 
   const chooseConsent = (value) => {
     setConsent(value);
+    applyConsent(value, value === 'granted');
     removeBanner();
-    if (value === 'granted') loadAnalytics();
   };
+
+  const privacyUrl = () =>
+    document.querySelector('a[href*="privacy/"]')?.href ||
+    new URL('/privacy/', window.location.origin).href;
 
   const showConsentBanner = () => {
     if (document.querySelector('[data-analytics-consent]')) return;
-
-    const privacyLink =
-      document.querySelector('a[href*="privacy/"]')?.href ||
-      new URL('privacy/', document.baseURI).href;
 
     const banner = document.createElement('section');
     banner.className = 'analytics-consent';
@@ -202,23 +219,33 @@
     banner.innerHTML = `
       <div class="analytics-consent__copy">
         <strong>Analytics preferences</strong>
-        <span>Allow anonymous usage analytics to help improve this website. Form contents are never sent to analytics.</span>
-        <a href="${privacyLink}">Privacy Policy</a>
+        <span>
+          Allow anonymous website analytics to help improve the site.
+          Contact-form contents are never sent to Google Analytics.
+        </span>
+        <a href="${privacyUrl()}">Privacy Policy</a>
       </div>
       <div class="analytics-consent__actions">
-        <button type="button" class="button button-secondary button-small" data-analytics-decline>Decline</button>
-        <button type="button" class="button button-primary button-small" data-analytics-accept>Allow analytics</button>
+        <button
+          type="button"
+          class="button button-secondary button-small"
+          data-analytics-decline
+        >Decline</button>
+        <button
+          type="button"
+          class="button button-primary button-small"
+          data-analytics-accept
+        >Allow analytics</button>
       </div>
     `;
 
-    banner.querySelector('[data-analytics-accept]').addEventListener(
-      'click',
-      () => chooseConsent('granted')
-    );
-    banner.querySelector('[data-analytics-decline]').addEventListener(
-      'click',
-      () => chooseConsent('denied')
-    );
+    banner
+      .querySelector('[data-analytics-accept]')
+      .addEventListener('click', () => chooseConsent('granted'));
+
+    banner
+      .querySelector('[data-analytics-decline]')
+      .addEventListener('click', () => chooseConsent('denied'));
 
     document.body.append(banner);
   };
@@ -232,30 +259,30 @@
     settings.className = 'footer-settings-link';
     settings.dataset.analyticsSettings = '';
     settings.textContent = 'Analytics settings';
+
     settings.addEventListener('click', () => {
       try {
         window.localStorage.removeItem(storageKey);
       } catch {}
+
+      applyConsent('denied');
       showConsentBanner();
     });
+
     legal.append(settings);
   };
 
   document.addEventListener('DOMContentLoaded', () => {
     addSettingsLink();
 
-    if (respectsDnt && dntEnabled) {
-      setConsent('denied');
-      return;
-    }
-
     const consent = getConsent();
 
-    if (config.requireConsent === false) {
-      loadAnalytics();
-    } else if (consent === 'granted') {
-      loadAnalytics();
-    } else if (consent !== 'denied') {
+    if (consent === 'granted') {
+      applyConsent('granted');
+    } else if (consent === 'denied') {
+      applyConsent('denied');
+    } else {
+      applyConsent('denied');
       showConsentBanner();
     }
   });
