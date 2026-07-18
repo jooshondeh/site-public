@@ -15,8 +15,13 @@ args = parser.parse_args()
 
 ROOT = Path(args.root).resolve()
 PRODUCTION_ORIGIN = "https://nexgenbinary.com"
+<<<<<<< HEAD
 BUILD = "production-2026-07-18-v5-1-hcaptcha"
 CACHE = "20260718prod51"
+=======
+BUILD = "production-2026-07-18-v5-audit"
+CACHE = "20260718prod5"
+>>>>>>> 15507804926698986b3bc4eb9d0a05112c2207c7
 MEASUREMENT_ID = "G-YY6Q8RTE7R"
 PHONE_HREF = "tel:+18044609640"
 PHONE_TEXT = "(804) 460-9640"
@@ -257,6 +262,7 @@ for marker in (
 if "https://js.hcaptcha.com/1/api.js" in index:
     errors.append("index.html still loads hCaptcha during the initial page request")
 
+<<<<<<< HEAD
 for marker in (
     'data-hcaptcha-lazy',
     'data-hcaptcha-load-status',
@@ -266,6 +272,8 @@ for marker in (
     if marker not in index:
         errors.append(f"index.html missing deferred hCaptcha marker: {marker}")
 
+=======
+>>>>>>> 15507804926698986b3bc4eb9d0a05112c2207c7
 if index.count('class="plan-row"') != 24:
     errors.append("index.html must contain exactly 24 service-plan rows")
 
@@ -299,9 +307,12 @@ for marker in (
     "const removePhoneDecorations",
     "successReturnFocus",
     "successFocusable",
+<<<<<<< HEAD
     "'[data-hcaptcha-lazy], .h-captcha[data-sitekey]'",
     "nexgenHCaptchaReady",
     "render=explicit",
+=======
+>>>>>>> 15507804926698986b3bc4eb9d0a05112c2207c7
     "nexgen:contact-form-success",
     "nexgen:section-change",
 ):

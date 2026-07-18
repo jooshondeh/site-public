@@ -43,6 +43,13 @@ jobs:
 
           cp -R assets book privacy terms _site/
 
+<<<<<<< HEAD
+=======
+          # Remove legacy variable-based analytics loaders from the artifact
+          # even when they still exist in the repository.
+          rm -f             _site/assets/analytics-id.js             _site/assets/analytics-config.js
+
+>>>>>>> 15507804926698986b3bc4eb9d0a05112c2207c7
           printf '%s\n' 'nexgenbinary.com' > _site/CNAME
           : > _site/.nojekyll
 
