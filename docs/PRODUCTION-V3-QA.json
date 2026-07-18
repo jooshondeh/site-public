@@ -1,0 +1,67 @@
+{
+  "build": "production-2026-07-18-v3",
+  "source_package": "site-public-main.zip",
+  "performance_changes": [
+    "hCaptcha JavaScript deferred until contact form nears viewport or receives interaction",
+    "Analytics loader reduced from three direct scripts to one lightweight configuration script",
+    "Analytics implementation loaded only when a valid Measurement ID exists and during idle time",
+    "Microsoft Bookings origin preconnected only after user intent",
+    "Unnecessary camera, microphone, geolocation, and clipboard iframe permissions removed"
+  ],
+  "deployment_changes": [
+    "Pages artifact upload explicitly includes hidden files",
+    "Hidden production files generated in _site rather than required in source uploads",
+    "Missing or invalid GA4 variable no longer fails deployment",
+    "Concurrent stale Pages builds are cancelled",
+    "Deployment artifact is allowlisted and excludes documentation and scripts"
+  ],
+  "validation": {
+    "source": "Validated 5 HTML files, 14 phone links, lazy third-party loading, analytics configuration, SEO files, and production integrations in /mnt/data/nexgenbinary-production-v3-work/site-public",
+    "artifact": "Validated 5 HTML files, 14 phone links, lazy third-party loading, analytics configuration, SEO files, and production integrations in /mnt/data/nexgenbinary-production-v3-work/_site",
+    "javascript_syntax_valid": true,
+    "css_error_count": 0,
+    "http_smoke": {
+      "/index.html": {
+        "status": 200,
+        "bytes": 44358
+      },
+      "/404.html": {
+        "status": 200,
+        "bytes": 7721
+      },
+      "/book/": {
+        "status": 200,
+        "bytes": 9544
+      },
+      "/privacy/": {
+        "status": 200,
+        "bytes": 11963
+      },
+      "/terms/": {
+        "status": 200,
+        "bytes": 11029
+      },
+      "/assets/site.css": {
+        "status": 200,
+        "bytes": 42565
+      },
+      "/assets/site.js": {
+        "status": 200,
+        "bytes": 23199
+      },
+      "/assets/analytics-config.js": {
+        "status": 200,
+        "bytes": 866
+      }
+    },
+    "browser_viewports": {
+      "status": "blocked_by_environment",
+      "detail": "/lib/python3.13/site-packages/playwright/_impl/_sync_base.py\", line 115, in _sync\n    return task.result()\n           ~~~~~~~~~~~^^\n  File \"/opt/pyvenv/lib/python3.13/site-packages/playwright/_impl/_page.py\", line 552, in goto\n    return await self._main_frame.goto(**locals_to_params(locals()))\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/pyvenv/lib/python3.13/site-packages/playwright/_impl/_frame.py\", line 153, in goto\n    await self._channel.send(\n        \"goto\", self._navigation_timeout, locals_to_params(locals())\n    )\n  File \"/opt/pyvenv/lib/python3.13/site-packages/playwright/_impl/_connection.py\", line 69, in send\n    return await self._connection.wrap_api_call(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    ...<3 lines>...\n    )\n    ^\n  File \"/opt/pyvenv/lib/python3.13/site-packages/playwright/_impl/_connection.py\", line 559, in wrap_api_call\n    raise rewrite_error(error, f\"{parsed_st['apiName']}: {error}\") from None\nplaywright._impl._errors.Error: Page.goto: net::ERR_BLOCKED_BY_ADMINISTRATOR at http://127.0.0.1:40761/site-public/\nCall log:\n  - navigating to \"http://127.0.0.1:40761/site-public/\", waiting until \"domcontentloaded\"\n\n",
+      "static_responsive_checks_passed": true
+    },
+    "analytics_variable_absent_deploys_successfully": true,
+    "analytics_valid_and_invalid_cases_tested": true,
+    "hcaptcha_failed_load_can_retry": true,
+    "invalid_ga_variable_does_not_fail_deployment": true
+  }
+}
