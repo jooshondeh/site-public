@@ -37,11 +37,27 @@ jobs:
         run: |
           set -euo pipefail
           rm -rf _site
-          mkdir -p _site
+          mkdir -p _site/.well-known
 
-          cp index.html 404.html robots.txt sitemap.xml site.webmanifest              CNAME .nojekyll social-preview.png nexgenbinary-logo.png              favicon.ico favicon.svg favicon-16x16.png favicon-32x32.png              favicon-192x192.png favicon-512x512.png apple-touch-icon.png _site/
+          cp index.html 404.html robots.txt sitemap.xml              social-preview.png nexgenbinary-logo.png              favicon.ico favicon.svg favicon-16x16.png favicon-32x32.png              favicon-192x192.png favicon-512x512.png apple-touch-icon.png              _site/
 
-          cp -R assets book privacy terms .well-known _site/
+          cp -R assets book privacy terms _site/
+
+          # Generate hidden/custom-domain files during deployment. They do not
+          # need to be uploaded through GitHub's browser interface.
+          printf '%s\n' 'nexgenbinary.com' > _site/CNAME
+          : > _site/.nojekyll
+          cat > _site/.well-known/security.txt <<'EOF'
+          Contact: mailto:info@nexgenbinary.com
+          Expires: 2027-07-18T23:59:59Z
+          Preferred-Languages: en
+          Canonical: https://nexgenbinary.com/.well-known/security.txt
+          EOF
+
+      - name: Configure Google Analytics
+        env:
+          GA4_MEASUREMENT_ID: ${{ vars.GA4_MEASUREMENT_ID }}
+        run: python3 scripts/write_analytics_id.py _site/assets/analytics-id.js
 
       - name: Validate deployment artifact
         run: python3 scripts/validate_site.py _site --clean
