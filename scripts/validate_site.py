@@ -13,16 +13,16 @@ args = parser.parse_args()
 
 ROOT = Path(args.root).resolve()
 PRODUCTION_ORIGIN = "https://nexgenbinary.com"
-BUILD = "production-2026-07-18-v1"
-CACHE = "20260718prod1"
+BUILD = "production-2026-07-18-v2"
+CACHE = "20260718prod2"
 PHONE_HREF = "tel:+18044609640"
 GOOGLE_BUSINESS_URL = "https://share.google/UWWubeCa8CN4sffAM"
 
 REQUIRED = [
-    "index.html", "404.html", "robots.txt", "sitemap.xml", "site.webmanifest",
+    "index.html", "404.html", "robots.txt", "sitemap.xml",
     "CNAME", ".nojekyll", ".well-known/security.txt",
     "assets/site.css", "assets/site.js",
-    "assets/analytics-config.js", "assets/analytics.js",
+    "assets/analytics-id.js", "assets/analytics-config.js", "assets/analytics.js",
     "book/index.html", "privacy/index.html", "terms/index.html",
     "nexgenbinary-logo.png", "social-preview.png",
     "favicon.ico", "favicon.svg", "favicon-16x16.png",
@@ -116,6 +116,9 @@ for path in html_files:
     if f"site.js?v={CACHE}" not in text:
         errors.append(f"{relative} missing current JS cache version")
 
+    if f"analytics-id.js?v={CACHE}" not in text:
+        errors.append(f"{relative} missing analytics ID loader reference")
+
     if f"analytics-config.js?v={CACHE}" not in text:
         errors.append(f"{relative} missing analytics config reference")
 
@@ -124,6 +127,12 @@ for path in html_files:
 
     if 'name="viewport"' not in text:
         errors.append(f"{relative} missing viewport metadata")
+
+    if 'rel="manifest"' in text or "site.webmanifest" in text:
+        errors.append(f"{relative} still enables the browser install prompt")
+
+    if 'name="referrer"' not in text or "strict-origin-when-cross-origin" not in text:
+        errors.append(f"{relative} missing Formspree-compatible referrer policy")
 
     if "nexgenbinary-stage" in text or "jooshondeh.github.io" in text:
         errors.append(f"{relative} still contains staging URLs")
@@ -283,18 +292,15 @@ try:
 except ET.ParseError as exc:
     errors.append(f"Invalid sitemap.xml: {exc}")
 
-manifest = json.loads((ROOT / "site.webmanifest").read_text(encoding="utf-8"))
-if manifest.get("start_url") != "./" or manifest.get("scope") != "./":
-    errors.append("Manifest must use portable relative start_url and scope")
-
 if (ROOT / "CNAME").read_text(encoding="utf-8").strip() != "nexgenbinary.com":
     errors.append("CNAME is not configured for nexgenbinary.com")
 
+analytics_id = (ROOT / "assets/analytics-id.js").read_text(encoding="utf-8")
 analytics_config = (ROOT / "assets/analytics-config.js").read_text(encoding="utf-8")
-if "googleAnalyticsMeasurementId" not in analytics_config:
-    errors.append("Analytics configuration is missing")
-if "G-XXXXXXXX" in analytics_config:
-    errors.append("Analytics config contains a fake placeholder ID")
+if "NEXGEN_GA4_MEASUREMENT_ID" not in analytics_id or "NEXGEN_GA4_MEASUREMENT_ID" not in analytics_config:
+    errors.append("Analytics ID injection configuration is missing")
+if "G-XXXXXXXX" in analytics_id or "G-XXXXXXXX" in analytics_config:
+    errors.append("Analytics files contain a fake placeholder ID")
 
 site_js = (ROOT / "assets/site.js").read_text(encoding="utf-8")
 for marker in (
@@ -302,6 +308,7 @@ for marker in (
     "element.tagName === 'svg' || element === display",
     "scrollReloadToTop",
     "nexgen:contact-form-success",
+    "nexgen:section-change",
 ):
     if marker not in site_js:
         errors.append(f"assets/site.js missing protected functionality: {marker}")

@@ -1,7 +1,7 @@
-// Analytics is disabled until a real GA4 Measurement ID is entered.
-// Example format: G-ABC123DE45
+// The deployment workflow injects the GitHub repository variable GA4_MEASUREMENT_ID.
+// Expected format: G-ABC123DE45
 window.NEXGEN_ANALYTICS_CONFIG = Object.freeze({
-  googleAnalyticsMeasurementId: "",
+  googleAnalyticsMeasurementId: String(window.NEXGEN_GA4_MEASUREMENT_ID || '').trim(),
   requireConsent: true,
   respectDoNotTrack: true
 });

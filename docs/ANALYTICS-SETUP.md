@@ -1,34 +1,51 @@
-# Analytics setup
+# Google Analytics 4 activation and access
 
-The production package includes privacy-conscious Google Analytics 4 support,
-but tracking is **disabled by default** because no Measurement ID was provided.
+The website code and deployment workflow are fully configured for GA4. A real
+Measurement ID is still required because Google assigns it inside the business
+owner's Analytics account; it cannot be generated from website files.
 
-## Enable traffic reporting
+## Activate analytics without editing website files
 
-1. Create a Google Analytics account and one GA4 property for NexGen Binary.
+1. Sign in at Google Analytics and create one GA4 property.
 2. Create a Web data stream for `https://nexgenbinary.com/`.
 3. Copy the Measurement ID beginning with `G-`.
-4. Open `assets/analytics-config.js`.
-5. Enter the ID:
+4. In GitHub open `jooshondeh/site-public`.
+5. Go to **Settings → Secrets and variables → Actions → Variables**.
+6. Create a repository variable:
 
-```js
-googleAnalyticsMeasurementId: "G-YOURREALID"
-```
+   - Name: `GA4_MEASUREMENT_ID`
+   - Value: the real `G-` Measurement ID
 
-6. Commit the change and verify traffic in the GA4 Realtime report.
+7. Open **Actions**, choose the production Pages workflow, and select **Run workflow**.
 
-When enabled, the site can report:
+The workflow safely writes the ID into the deployment artifact. The ID is not a
+secret; using a repository variable avoids repeated file edits.
 
-- page views and referral sources
-- browser/device categories and approximate regions
-- phone, email, booking, and Google Business clicks
-- contact-form starts and successful submissions
-- scroll depth
-- LCP, CLS, and INP performance metrics
+## Where to view the information
 
-The analytics code does not send form field values, names, email addresses,
-phone numbers, practice names, message content, or hCaptcha responses.
+Sign in to Google Analytics and open the NexGen Binary property:
 
-`requireConsent` defaults to `true`, so a consent banner appears only after a
-valid Measurement ID is entered. The banner does not appear while analytics is
-disabled.
+- **Reports → Realtime**: verify visits and events within minutes.
+- **Reports → Acquisition**: traffic sources, search, direct, referrals, campaigns.
+- **Reports → Engagement → Pages and screens**: page and section engagement.
+- **Reports → Engagement → Events**: calls, emails, bookings, leads, and scroll depth.
+- **Explore**: build custom funnels and comparisons.
+
+Recommended events to mark as key events in **Admin → Events / Key events**:
+
+- `generate_lead`
+- `click_to_call`
+- `booking_click`
+- `email_click`
+
+Additional events included:
+
+- `google_business_click`
+- `contact_form_start`
+- `contact_form_error`
+- `section_view`
+- `scroll_depth`
+- `web_vital`
+
+Analytics loads only after consent and does not send contact-form values,
+message contents, names, email addresses, practice names, or hCaptcha responses.

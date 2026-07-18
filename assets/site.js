@@ -2,8 +2,7 @@
   'use strict';
 
 
-  // On a browser refresh, start at the top instead of restoring the previous scroll position.
-  // Normal link navigation and non-refresh hash links continue to work as expected.
+  // Preserve valid section URLs on refresh. Pages without a section hash start at top.
   const navigationEntry = performance.getEntriesByType?.('navigation')?.[0];
   const isPageReload =
     navigationEntry?.type === 'reload' ||
@@ -13,10 +12,24 @@
     history.scrollRestoration = 'manual';
   }
 
+  const sectionHashIds = new Set(
+    [...document.querySelectorAll('[data-nav-link][href^="#"]')]
+      .map((link) => link.getAttribute('href')?.slice(1))
+      .filter(Boolean)
+  );
+
+  const currentHashId = () => decodeURIComponent(window.location.hash.slice(1));
+  const isValidSectionHash = (id) => sectionHashIds.has(id) && !!document.getElementById(id);
+
   const scrollReloadToTop = () => {
     if (!isPageReload) return;
 
-    // A section hash would otherwise force the browser back to that section after refresh.
+    const hashId = currentHashId();
+    if (isValidSectionHash(hashId)) {
+      document.getElementById(hashId)?.scrollIntoView({ behavior: 'auto', block: 'start' });
+      return;
+    }
+
     if (window.location.hash) {
       history.replaceState(
         history.state,
@@ -167,30 +180,78 @@
     const href = link.getAttribute('href') || '';
     return href.startsWith('#') && href.length > 1;
   });
-  const setActiveLink = () => {
+
+  let currentSectionId = null;
+  let sectionUpdateFrame = null;
+
+  const sectionUrl = (sectionId) => {
+    const base = `${window.location.pathname}${window.location.search}`;
+    return sectionId === 'home' ? base : `${base}#${sectionId}`;
+  };
+
+  const updateSectionUrl = (sectionId) => {
+    if (!sectionId || sectionId === currentSectionId) return;
+    currentSectionId = sectionId;
+
+    const nextUrl = sectionUrl(sectionId);
+    const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    if (nextUrl !== currentUrl) {
+      history.replaceState(history.state, document.title, nextUrl);
+    }
+
+    window.dispatchEvent(new CustomEvent('nexgen:section-change', {
+      detail: { sectionId }
+    }));
+  };
+
+  const setActiveLink = ({ updateUrl = true } = {}) => {
     if (!sectionLinks.length) return;
+
     const offset = (header?.offsetHeight || 80) + 24;
     let current = sectionLinks[0].getAttribute('href').slice(1);
+
     for (const link of sectionLinks) {
       const id = link.getAttribute('href').slice(1);
       const section = document.getElementById(id);
       if (section && window.scrollY + offset >= section.offsetTop) current = id;
     }
+
     if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) {
       current = sectionLinks[sectionLinks.length - 1].getAttribute('href').slice(1);
     }
+
     sectionLinks.forEach((link) => {
       link.classList.toggle('is-active', link.getAttribute('href') === `#${current}`);
     });
+
+    if (updateUrl) updateSectionUrl(current);
   };
+
+  const scheduleSectionUpdate = () => {
+    if (sectionUpdateFrame !== null) return;
+    sectionUpdateFrame = requestAnimationFrame(() => {
+      sectionUpdateFrame = null;
+      setActiveLink();
+    });
+  };
+
   if (sectionLinks.length) {
-    setActiveLink();
+    const initialHash = currentHashId();
+    setActiveLink({ updateUrl: !isValidSectionHash(initialHash) });
+
     window.addEventListener('scroll', () => {
       if (mobileBreakpoint.matches && nav?.classList.contains('is-open')) closeNav();
-      setActiveLink();
+      scheduleSectionUpdate();
     }, { passive: true });
-    window.addEventListener('resize', setActiveLink);
-    window.addEventListener('pageshow', setActiveLink);
+
+    window.addEventListener('resize', scheduleSectionUpdate);
+    window.addEventListener('pageshow', () => setActiveLink({
+      updateUrl: !isValidSectionHash(currentHashId())
+    }));
+    window.addEventListener('hashchange', () => {
+      currentSectionId = null;
+      scheduleSectionUpdate();
+    });
   }
 
   const bookingModal = document.getElementById('nb-booking-modal');

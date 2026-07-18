@@ -88,6 +88,11 @@
       sendEvent('contact_form_error');
     });
 
+    window.addEventListener('nexgen:section-change', (event) => {
+      const sectionId = event.detail?.sectionId;
+      if (sectionId) sendEvent('section_view', { section_id: sectionId });
+    });
+
     const reached = new Set();
     const trackScroll = () => {
       const documentHeight = Math.max(
