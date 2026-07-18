@@ -1442,11 +1442,17 @@ a.footer-phone-button:hover {
 /* production-2026-07-18-v3: deferred hCaptcha and small performance refinements */
 .h-captcha[data-hcaptcha-lazy] {
   display: grid;
-  place-items: center;
+  align-items: center;
+  justify-items: start;
   min-height: 74px;
   color: var(--text-muted);
   font-size: 0.9rem;
-  text-align: center;
+  text-align: left;
+}
+
+.h-captcha[data-hcaptcha-lazy] > * {
+  justify-self: start;
+  margin-inline: 0 auto;
 }
 
 .h-captcha[data-hcaptcha-lazy][aria-busy="true"] .captcha-load-status::before {

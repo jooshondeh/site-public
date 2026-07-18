@@ -15,8 +15,8 @@ args = parser.parse_args()
 
 ROOT = Path(args.root).resolve()
 PRODUCTION_ORIGIN = "https://nexgenbinary.com"
-BUILD = "production-2026-07-18-v5-1-hcaptcha"
-CACHE = "20260718prod51"
+BUILD = "production-2026-07-18-v5-2-hcaptcha-left"
+CACHE = "20260718prod52"
 MEASUREMENT_ID = "G-YY6Q8RTE7R"
 PHONE_HREF = "tel:+18044609640"
 PHONE_TEXT = "(804) 460-9640"
@@ -311,6 +311,14 @@ for marker in (
 css = (ROOT / "assets/site.css").read_text(encoding="utf-8")
 if 'content: "(804) 460-9640"' in css:
     errors.append("Phone number is still generated through CSS")
+
+for marker in (
+    "justify-items: start;",
+    "text-align: left;",
+    ".h-captcha[data-hcaptcha-lazy] > *",
+):
+    if marker not in css:
+        errors.append(f"hCaptcha left-alignment CSS missing marker: {marker}")
 for undefined in ("var(--ink)", "var(--navy)", "var(--link)"):
     if undefined in css:
         errors.append(f"CSS still contains undefined token: {undefined}")
