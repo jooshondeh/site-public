@@ -15,9 +15,9 @@ args = parser.parse_args()
 
 ROOT = Path(args.root).resolve()
 PRODUCTION_ORIGIN = "https://nexgenbinary.com"
-BUILD = "production-2026-07-18-v4-gtag"
-CACHE = "20260718prod4"
-MEASUREMENT_ID = "G-WWCZJ4MDGN"
+BUILD = "production-2026-07-18-v4-1-gtag"
+CACHE = "20260718prod41"
+MEASUREMENT_ID = "G-YY6Q8RTE7R"
 PHONE_HREF = "tel:+18044609640"
 GOOGLE_BUSINESS_URL = "https://share.google/UWWubeCa8CN4sffAM"
 

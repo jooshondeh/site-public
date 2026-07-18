@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const measurementId = 'G-WWCZJ4MDGN';
+  const measurementId = 'G-YY6Q8RTE7R';
   const storageKey = 'nexgen_analytics_consent_v2';
 
   const getConsent = () => {
