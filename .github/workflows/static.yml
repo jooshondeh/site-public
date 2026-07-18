@@ -24,86 +24,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
-
-      - name: Prepare optional Google Analytics
-        env:
-          GA4_MEASUREMENT_ID: ${{ vars.GA4_MEASUREMENT_ID }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-          import os
-          import re
-
-          output = Path("assets/analytics-config.js")
-          requested = os.environ.get("GA4_MEASUREMENT_ID", "").strip().upper()
-
-          existing = output.read_text(encoding="utf-8") if output.exists() else ""
-          existing_match = re.search(
-              r"const measurementId = ['\"](G-[A-Z0-9]+)['\"]",
-              existing,
-              re.I,
-          )
-          existing_id = existing_match.group(1).upper() if existing_match else ""
-
-          if requested and not re.fullmatch(r"G-[A-Z0-9]+", requested):
-              print(
-                  "::warning::GA4_MEASUREMENT_ID is invalid. "
-                  "Analytics will remain disabled and deployment will continue."
-              )
-              requested = ""
-
-          measurement_id = requested or existing_id
-
-          content = """(() => {{
-            'use strict';
-
-            const measurementId = {measurement!r};
-            window.NEXGEN_ANALYTICS_CONFIG = Object.freeze({{
-              googleAnalyticsMeasurementId: measurementId,
-              requireConsent: true,
-              respectDoNotTrack: true
-            }});
-
-            if (!/^G-[A-Z0-9]+$/i.test(measurementId)) return;
-
-            const currentScript = document.currentScript;
-            const loadAnalytics = () => {{
-              if (document.querySelector('script[data-nexgen-analytics-loader]')) return;
-              const script = document.createElement('script');
-              script.async = true;
-              script.dataset.nexgenAnalyticsLoader = '';
-              script.src = new URL(
-                'analytics.js?v=20260718prod3',
-                currentScript?.src || document.baseURI
-              ).href;
-              document.head.append(script);
-            }};
-
-            if ('requestIdleCallback' in window) {{
-              window.requestIdleCallback(loadAnalytics, {{ timeout: 1600 }});
-            }} else {{
-              window.setTimeout(loadAnalytics, 0);
-            }}
-          }})();
-          """.format(measurement=measurement_id)
-
-          output.parent.mkdir(parents=True, exist_ok=True)
-          output.write_text(content, encoding="utf-8")
-
-          if measurement_id:
-              print(f"Google Analytics configured with {measurement_id}.")
-          else:
-              print(
-                  "Google Analytics is disabled because no repository variable "
-                  "is configured. Deployment continues normally."
-              )
-          PY
 
       - name: Validate source
         run: python3 scripts/validate_site.py .
@@ -115,28 +39,13 @@ jobs:
           rm -rf _site
           mkdir -p _site/.well-known
 
-          cp \
-            index.html \
-            404.html \
-            robots.txt \
-            sitemap.xml \
-            social-preview.png \
-            nexgenbinary-logo.png \
-            favicon.ico \
-            favicon.svg \
-            favicon-16x16.png \
-            favicon-32x32.png \
-            favicon-192x192.png \
-            favicon-512x512.png \
-            apple-touch-icon.png \
-            _site/
+          cp             index.html             404.html             robots.txt             sitemap.xml             social-preview.png             nexgenbinary-logo.png             favicon.ico             favicon.svg             favicon-16x16.png             favicon-32x32.png             favicon-192x192.png             favicon-512x512.png             apple-touch-icon.png             _site/
 
           cp -R assets book privacy terms _site/
 
-          # Generate hidden/custom-domain files during deployment so browser
-          # uploads do not need to preserve dot-prefixed files or folders.
           printf '%s\n' 'nexgenbinary.com' > _site/CNAME
           : > _site/.nojekyll
+
           cat > _site/.well-known/security.txt <<'EOF'
           Contact: mailto:info@nexgenbinary.com
           Expires: 2027-07-18T23:59:59Z
