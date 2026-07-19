@@ -423,6 +423,7 @@
     };
 
     const requestCaptchaLoad = () => {
+      warmExternalOrigin('https://js.hcaptcha.com');
       loadHCaptcha().catch((error) => {
         console.error('hCaptcha failed to load:', error);
         if (captchaError) captchaError.textContent = 'Verification could not load. Please retry or email us directly.';

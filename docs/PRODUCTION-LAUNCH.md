@@ -20,7 +20,7 @@ Recommended email-security follow-up:
 3. Start with `p=none`, review legitimate senders, then move gradually to
    `quarantine` and finally `reject`.
 
-## Search
+## Search and discovery
 
 Submit:
 
@@ -33,4 +33,11 @@ to Google Search Console and Bing Webmaster Tools.
 - Formspree: confirm the production domain restriction is `nexgenbinary.com`
 - hCaptcha: confirm the allowed hostname includes `nexgenbinary.com`
 - Microsoft Bookings: complete a real test booking
-- Google Analytics: verify `G-YY6Q8RTE7R` in Realtime
+
+
+## Post-deployment checks
+
+- Submit `https://nexgenbinary.com/sitemap.xml` to Google Search Console and Bing Webmaster Tools.
+- Test the homepage with PageSpeed Insights after the deployment cache clears.
+- Complete one real contact-form submission and one Microsoft Bookings test.
+- Confirm the Google Business Profile website field points to `https://nexgenbinary.com/`.
