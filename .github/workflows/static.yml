@@ -39,7 +39,21 @@ jobs:
           rm -rf _site
           mkdir -p _site/.well-known
 
-          cp             index.html             404.html             robots.txt             sitemap.xml             social-preview.png             nexgenbinary-logo.png             favicon.ico             favicon.svg             favicon-16x16.png             favicon-32x32.png             favicon-192x192.png             favicon-512x512.png             apple-touch-icon.png             _site/
+          cp \
+            index.html \
+            404.html \
+            robots.txt \
+            sitemap.xml \
+            social-preview.png \
+            nexgenbinary-logo.png \
+            favicon.ico \
+            favicon.svg \
+            favicon-16x16.png \
+            favicon-32x32.png \
+            favicon-192x192.png \
+            favicon-512x512.png \
+            apple-touch-icon.png \
+            _site/
 
           cp -R assets book privacy terms _site/
 
