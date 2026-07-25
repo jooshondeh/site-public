@@ -1,0 +1,31 @@
+{
+  "audit_date": "2026-07-24",
+  "build": "production-2026-07-24-v7-compatibility",
+  "status": "PASS_WITH_EXTERNAL_CONFIGURATION_ACTIONS",
+  "source_checks": {
+    "html_documents": 5,
+    "duplicate_ids": 0,
+    "native_phone_links": 14,
+    "javascript_syntax": "PASS",
+    "css_parse": "PASS",
+    "internal_links_and_assets": "PASS",
+    "seo_metadata": "PASS",
+    "tracking_code": "NONE"
+  },
+  "compatibility_changes": [
+    "WebKit backdrop-filter fallback",
+    "100vh fallback before 100dvh",
+    "MediaQueryList addListener fallback",
+    "44x44 minimum mobile navigation target",
+    "Production cache refresh markers"
+  ],
+  "external_actions": [
+    "Confirm Google Business verification from the owner account",
+    "Correct storefront versus service-area configuration",
+    "Repair public business-hours display",
+    "Upload the provided 720x720 logo asset after verification",
+    "Configure Microsoft Bookings reminders and follow-up",
+    "Confirm Google Voice subscription type and use Workspace Voice Standard for multi-user ring groups"
+  ],
+  "browser_test_scope_note": "Static, structural, syntax, responsive-rule, prior viewport QA, and live HTTP/content checks were completed. A physical device lab and every browser/OS version cannot be exhaustively simulated in this environment; use the included post-deployment matrix for final device acceptance."
+}

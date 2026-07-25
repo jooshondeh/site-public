@@ -796,7 +796,7 @@ textarea.form-control { min-height: 250px; resize: vertical; flex: 1; }
   .brand-copy { max-width: 170px; }
   .brand-name { font-size: 0.93rem; }
   .brand-slogan { font-size: 0.52rem; }
-  .nav-toggle { width: 40px; height: 40px; padding: 8px; }
+  .nav-toggle { width: 44px; height: 44px; padding: 10px; }
   .section { padding-block: 56px; }
   .hero-panel { padding: 18px; border-radius: 20px; }
   .hero-title { font-size: 2.65rem; }
@@ -834,6 +834,7 @@ textarea.form-control { min-height: 250px; resize: vertical; flex: 1; }
   position: absolute;
   inset: 0;
   background: rgba(4, 23, 43, 0.76);
+  -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
 }
 .nb-booking-dialog {
@@ -842,6 +843,7 @@ textarea.form-control { min-height: 250px; resize: vertical; flex: 1; }
   display: grid;
   grid-template-rows: auto 1fr;
   width: min(1040px, calc(100vw - 24px));
+  height: min(850px, calc(100vh - 24px));
   height: min(850px, calc(100dvh - 24px));
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.22);
@@ -931,6 +933,7 @@ body.nb-modal-open {
   .nb-booking-modal { padding: 8px; }
   .nb-booking-dialog {
     width: calc(100vw - 16px);
+    height: calc(100vh - 16px);
     height: calc(100dvh - 16px);
     border-radius: 16px;
   }
@@ -1016,6 +1019,7 @@ body.nb-modal-open {
   position: absolute;
   inset: 0;
   background: rgba(4, 23, 43, 0.72);
+  -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
 }
 .form-success-panel {

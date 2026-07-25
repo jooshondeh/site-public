@@ -167,7 +167,11 @@
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') closeNav();
     });
-    mobileBreakpoint.addEventListener?.('change', closeNav);
+    if (typeof mobileBreakpoint.addEventListener === 'function') {
+      mobileBreakpoint.addEventListener('change', closeNav);
+    } else if (typeof mobileBreakpoint.addListener === 'function') {
+      mobileBreakpoint.addListener(closeNav);
+    }
     navLinks.forEach((link) => link.addEventListener('click', closeNav));
   }
 

@@ -6,7 +6,7 @@ checks = {
     "/": [
         "Dental IT Support &amp; Managed Services in Virginia | NexGen Binary",
         "data-hcaptcha-lazy",
-        "assets/site.js?v=20260719prod6",
+        "assets/site.js?v=20260724prod7",
         "(804) 460-9640",
     ],
     "/robots.txt": ["Sitemap: https://nexgenbinary.com/sitemap.xml"],

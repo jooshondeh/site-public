@@ -14,8 +14,8 @@ args = parser.parse_args()
 
 ROOT = Path(args.root).resolve()
 PRODUCTION_ORIGIN = "https://nexgenbinary.com"
-BUILD = "production-2026-07-19-v6-no-tracking"
-CACHE = "20260719prod6"
+BUILD = "production-2026-07-24-v7-compatibility"
+CACHE = "20260724prod7"
 PHONE_HREF = "tel:+18044609640"
 PHONE_TEXT = "(804) 460-9640"
 GOOGLE_BUSINESS_URL = "https://share.google/UWWubeCa8CN4sffAM"
@@ -257,7 +257,7 @@ try:
     if set(locations) != expected:
         errors.append(f"Unexpected sitemap URLs: {locations}")
     lastmods = [e.text for e in sitemap.findall('.//{http://www.sitemaps.org/schemas/sitemap/0.9}lastmod')]
-    if not lastmods or any(value != "2026-07-19" for value in lastmods):
+    if not lastmods or any(value != "2026-07-24" for value in lastmods):
         errors.append(f"Sitemap lastmod values are stale: {lastmods}")
 except ET.ParseError as exc:
     errors.append(f"Invalid sitemap.xml: {exc}")
