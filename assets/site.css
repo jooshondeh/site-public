@@ -1214,6 +1214,9 @@ html.form-modal-open, body.form-modal-open { overflow: hidden !important; }
 }
 #contact .captcha-compact {
   margin-top: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 #contact .captcha-compact,
 #contact .contact-form-v19 .h-captcha,
@@ -1267,6 +1270,26 @@ html.form-modal-open, body.form-modal-open { overflow: hidden !important; }
 .footer-service-area .footer-google-business svg {
   width: 19px;
   height: 19px;
+}
+.footer-social-links {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.footer-linkedin-business {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+  background: #0a66c2;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18);
+}
+.footer-linkedin-business svg {
+  width: 20px;
+  height: 20px;
 }
 
 
