@@ -6,11 +6,13 @@ checks = {
     "/": [
         "Dental IT Support &amp; Managed Services in Virginia | NexGen Binary",
         "data-hcaptcha-lazy",
-        "assets/site.js?v=20260724prod7",
+        "assets/site.js?v=20260911prod8",
         "(804) 460-9640",
+        "Monday–Saturday, 8:00 AM–5:00 PM Eastern Time",
+        "https://www.facebook.com/NexGenBinary/",
     ],
     "/robots.txt": ["Sitemap: https://nexgenbinary.com/sitemap.xml"],
-    "/sitemap.xml": ["https://nexgenbinary.com/", "2026-07-19"],
+    "/sitemap.xml": ["https://nexgenbinary.com/", "2026-09-11"],
     "/privacy/": ["Cookies and Browser Storage"],
 }
 for route, markers in checks.items():

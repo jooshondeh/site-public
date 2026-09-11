@@ -14,11 +14,13 @@ args = parser.parse_args()
 
 ROOT = Path(args.root).resolve()
 PRODUCTION_ORIGIN = "https://nexgenbinary.com"
-BUILD = "production-2026-07-24-v7-compatibility"
-CACHE = "20260724prod7"
+BUILD = "production-2026-09-11-v8-facebook-hours"
+CACHE = "20260911prod8"
 PHONE_HREF = "tel:+18044609640"
 PHONE_TEXT = "(804) 460-9640"
 GOOGLE_BUSINESS_URL = "https://share.google/UWWubeCa8CN4sffAM"
+LINKEDIN_URL = "https://www.linkedin.com/company/-nexgen-binary/"
+FACEBOOK_URL = "https://www.facebook.com/NexGenBinary/"
 
 SOURCE_REQUIRED = [
     "index.html", "404.html", "robots.txt", "sitemap.xml",
@@ -55,6 +57,8 @@ class Parser(HTMLParser):
         self.phone_display_texts = []
         self.in_phone_display = False
         self.google_links = []
+        self.linkedin_links = []
+        self.facebook_links = []
         self.images_without_alt = []
         self.canonicals = []
         self.robots = []
@@ -74,6 +78,10 @@ class Parser(HTMLParser):
             self.phone_display_texts.append("")
         if "google-business" in classes:
             self.google_links.append((tag, data.get("href")))
+        if "linkedin-business" in classes:
+            self.linkedin_links.append((tag, data.get("href")))
+        if "facebook-business" in classes:
+            self.facebook_links.append((tag, data.get("href")))
         if tag == "img" and "alt" not in data:
             self.images_without_alt.append(data.get("src", "<unknown>"))
         if tag == "link" and "canonical" in data.get("rel", "").split():
@@ -147,6 +155,16 @@ for path in html_files:
     for tag, href in parsed.google_links:
         if tag != "a" or href != GOOGLE_BUSINESS_URL:
             errors.append(f"{relative} incorrect Google Business URL: {href}")
+    if not parsed.linkedin_links:
+        errors.append(f"{relative} missing LinkedIn link")
+    for tag, href in parsed.linkedin_links:
+        if tag != "a" or href != LINKEDIN_URL:
+            errors.append(f"{relative} incorrect LinkedIn URL: {href}")
+    if not parsed.facebook_links:
+        errors.append(f"{relative} missing Facebook link")
+    for tag, href in parsed.facebook_links:
+        if tag != "a" or href != FACEBOOK_URL:
+            errors.append(f"{relative} incorrect Facebook URL: {href}")
 
     for ref in parsed.refs:
         if ref.startswith(("#", "mailto:", "tel:", "javascript:", "data:")):
@@ -197,7 +215,9 @@ for marker in (
     "https://formspree.io/f/mdalpbzo", "267e959c-42c0-45b2-a4d2-45621dbc4f28",
     "https://outlook.office.com/book/MeetNexGenBinary@nexgenbinary.com/",
     "data-booking-open", "data-back-to-top", '"@type": "ProfessionalService"',
-    GOOGLE_BUSINESS_URL,
+    GOOGLE_BUSINESS_URL, LINKEDIN_URL, FACEBOOK_URL,
+    '"opens": "08:00"',
+    "Monday–Saturday, 8:00 AM–5:00 PM Eastern Time",
 ):
     if marker not in index:
         errors.append(f"index.html missing required marker: {marker}")
@@ -257,7 +277,7 @@ try:
     if set(locations) != expected:
         errors.append(f"Unexpected sitemap URLs: {locations}")
     lastmods = [e.text for e in sitemap.findall('.//{http://www.sitemaps.org/schemas/sitemap/0.9}lastmod')]
-    if not lastmods or any(value != "2026-07-24" for value in lastmods):
+    if not lastmods or any(value != "2026-09-11" for value in lastmods):
         errors.append(f"Sitemap lastmod values are stale: {lastmods}")
 except ET.ParseError as exc:
     errors.append(f"Invalid sitemap.xml: {exc}")
@@ -268,4 +288,4 @@ if args.clean and (ROOT / "CNAME").read_text(encoding="utf-8").strip() != "nexge
 if errors:
     raise SystemExit("\n".join(errors))
 
-print(f"Validated {len(html_files)} HTML files, {phone_count} native phone links, no tracking code, SEO metadata, and integrations.")
+print(f"Validated {len(html_files)} HTML files, {phone_count} native phone links, business hours, social links, no tracking code, SEO metadata, and integrations.")

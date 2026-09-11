@@ -1255,41 +1255,55 @@ html.form-modal-open, body.form-modal-open { overflow: hidden !important; }
 }
 
 
-/* Footer service-area Google Business placement */
+/* Footer social links: Google Business, LinkedIn, and Facebook */
 .footer-service-area {
   display: grid;
   justify-items: start;
   gap: 10px;
 }
-.footer-service-area .footer-google-business {
-  width: 34px;
-  height: 34px;
+.footer-social-links {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.footer-social-link {
+  width: 36px;
+  height: 36px;
   margin: 0;
-  flex: 0 0 34px;
+  flex: 0 0 36px;
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+.footer-social-link:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.34);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
 }
 .footer-service-area .footer-google-business svg {
   width: 19px;
   height: 19px;
 }
-.footer-social-links {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.footer-linkedin-business {
+.footer-linkedin-business,
+.footer-facebook-business {
   display: inline-grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
-  flex: 0 0 34px;
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 50%;
-  background: #0a66c2;
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18);
 }
-.footer-linkedin-business svg {
+.footer-linkedin-business { background: #0a66c2; }
+.footer-facebook-business { background: #1877f2; }
+.footer-linkedin-business svg,
+.footer-facebook-business svg {
   width: 20px;
   height: 20px;
+}
+@media (max-width: 700px) {
+  .footer-social-link {
+    width: 44px;
+    height: 44px;
+    flex-basis: 44px;
+  }
 }
 
 
