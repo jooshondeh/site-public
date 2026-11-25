@@ -158,7 +158,7 @@
   const toggle = document.querySelector('[data-nav-toggle]');
   const nav = document.querySelector('[data-primary-nav]');
   const navLinks = Array.from(document.querySelectorAll('[data-nav-link]'));
-  const mobileBreakpoint = window.matchMedia('(max-width: 1180px)');
+  const mobileBreakpoint = window.matchMedia('(max-width: 1080px)');
 
   // CSS controls the minimum height; this offset follows wrapping and zoom.
   const measureHeader = () => {

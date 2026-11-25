@@ -15,8 +15,8 @@ args = parser.parse_args()
 
 ROOT = Path(args.root).resolve()
 PRODUCTION_ORIGIN = "https://nexgenbinary.com"
-BUILD = "production-2026-11-25-v9-blue-brand"
-CACHE = "20261125brand9"
+BUILD = "production-2026-11-25-v10-layout"
+CACHE = "20261125layout10"
 RELEASE_DATE = "2026-11-25"
 PHONE_HREF = "tel:+18044609640"
 PHONE_TEXT = "(804) 460-9640"

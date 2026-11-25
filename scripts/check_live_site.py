@@ -9,8 +9,8 @@ import struct
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-BUILD = "production-2026-11-25-v9-blue-brand"
-CACHE = "20261125brand9"
+BUILD = "production-2026-11-25-v10-layout"
+CACHE = "20261125layout10"
 RELEASE_DATE = "2026-11-25"
 
 parser = argparse.ArgumentParser(description=__doc__)
