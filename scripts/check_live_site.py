@@ -5,12 +5,15 @@ This script fetches public pages/assets only. It does not submit the contact
 form, solve hCaptcha, book appointments, or change any account settings.
 """
 import argparse
+from datetime import datetime, timezone
+from html.parser import HTMLParser
+import re
 import struct
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-BUILD = "production-2026-11-25-v10-layout"
-CACHE = "20261125layout10"
+BUILD = "production-2026-11-25-v11-service-plans"
+CACHE = "20261125plans11"
 RELEASE_DATE = "2026-11-25"
 
 parser = argparse.ArgumentParser(description=__doc__)
@@ -21,11 +24,93 @@ BASE = args.base.rstrip("/")
 errors = []
 
 
+class ReleaseParser(HTMLParser):
+    """Collect release landmarks without relying on attribute order or quoting."""
+    def __init__(self):
+        super().__init__()
+        self.elements = []
+        self.text = []
+        self.skip_text = None
+        self.in_interest = False
+        self.interest_options = []
+        self.sections = []
+        self.faq_disclosures = 0
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        self.elements.append((tag, attrs))
+        if tag in ("script", "style", "svg"):
+            self.skip_text = tag
+        if tag == "section":
+            self.sections.append(attrs.get("id"))
+        if tag == "details" and "coverage-questions" in self.sections:
+            self.faq_disclosures += 1
+        if tag == "select" and attrs.get("id") == "contact-interest":
+            self.in_interest = True
+        if tag == "option" and self.in_interest:
+            self.interest_options.append(attrs.get("value"))
+
+    def handle_endtag(self, tag):
+        if tag == self.skip_text:
+            self.skip_text = None
+        if tag == "select":
+            self.in_interest = False
+        if tag == "section" and self.sections:
+            self.sections.pop()
+
+    def handle_data(self, data):
+        if self.skip_text is None:
+            self.text.append(data)
+
+
+def check_homepage_structure(body):
+    parsed = ReleaseParser()
+    parsed.feed(body)
+    parsed.close()
+    names = {"essentials": "Managed IT Essentials", "standard": "Managed IT Standard", "premium": "Managed IT Premium"}
+    cards = [attrs for tag, attrs in parsed.elements if tag == "article" and "plan-summary" in attrs.get("class", "").split()]
+    if len(cards) != 3 or sorted(card.get("data-plan", "") for card in cards) != sorted(names):
+        errors.append("/: expected the three v11 managed-plan summaries")
+    recommended = [card for card in cards if card.get("data-recommended") == "true"]
+    if len(recommended) != 1 or recommended[0].get("data-plan") != "standard":
+        errors.append("/: Standard must be the only recommended plan")
+    readable = " ".join(" ".join(parsed.text).split())
+    for name in names.values():
+        if name not in readable:
+            errors.append(f"/: missing readable plan name {name!r}")
+    for tag, element_id in (("div", "plan-comparison"), ("table", "plan-comparison-table"), ("section", "additional-services"), ("section", "coverage-questions"), ("select", "contact-interest")):
+        matches = [attrs for candidate, attrs in parsed.elements if candidate == tag and attrs.get("id") == element_id]
+        if len(matches) != 1:
+            errors.append(f"/: expected one {tag} #{element_id}")
+        elif element_id == "plan-comparison" and "plan-comparison-content" not in matches[0].get("class", "").split():
+            errors.append("/: comparison anchor must be on the shared plan-comparison-content wrapper")
+        elif tag == "select" and matches[0].get("name") != "interest":
+            errors.append("/: contact-interest must submit under the interest field")
+    features = {"remote-support", "maintenance", "endpoint-protection", "monitoring-alerts", "backup-management", "restore-testing", "backup-reporting", "vendor-coordination", "onsite-maintenance", "technology-planning", "warranty-coordination", "loaner-equipment", "after-hours"}
+    rows = [attrs.get("data-feature") for tag, attrs in parsed.elements if tag == "tr" and "data-feature" in attrs]
+    if len(rows) != 13 or set(rows) != features:
+        errors.append("/: comparison must expose all 13 distinct service features")
+    quote_links = [attrs for tag, attrs in parsed.elements if tag == "a" and "data-plan-select" in attrs]
+    if len(quote_links) != 6:
+        errors.append("/: expected six plan-specific quote links")
+    for name in names.values():
+        matching = [attrs for attrs in quote_links if attrs.get("data-plan-select") == name]
+        if len(matching) != 2 or any(attrs.get("href") != "#contact-form" for attrs in matching):
+            errors.append(f"/: incorrect quote routing for {name}")
+    expected_options = set(names.values()) | {"Help me choose", "Project or one-time support"}
+    if set(parsed.interest_options) - {""} != expected_options or len(parsed.interest_options) != len(set(parsed.interest_options)):
+        errors.append("/: contact interest choices do not match the current plans")
+    if not parsed.faq_disclosures:
+        errors.append("/: coverage questions require native details disclosures")
+    if "Managed IT Complete" in readable or re.search(r"[$£€]\s*\d|\bUSD\s*\d", readable):
+        errors.append("/: obsolete plan wording or numeric public pricing is still deployed")
+
+
 def fetch(route, expected_status=200):
     request = Request(
         BASE + route,
         headers={
-            "User-Agent": "NexGenBinaryProductionCheck/2.0",
+            "User-Agent": "NexGenBinaryProductionCheck/3.0",
             "Cache-Control": "no-cache",
         },
     )
@@ -66,6 +151,10 @@ checks = {
     "/404.html": common_page_markers + ["noindex"],
     "/robots.txt": ["Sitemap: https://nexgenbinary.com/sitemap.xml"],
     "/sitemap.xml": ["https://nexgenbinary.com/", RELEASE_DATE],
+    "/.well-known/security.txt": [
+        "Contact: mailto:info@nexgenbinary.com",
+        "Canonical: https://nexgenbinary.com/.well-known/security.txt",
+    ],
 }
 for route, markers in checks.items():
     data = fetch(route)
@@ -82,6 +171,16 @@ for route, markers in checks.items():
     for forbidden in ("googletagmanager", "google-analytics", "assets/analytics.js", "analytics settings"):
         if forbidden in lowered:
             errors.append(f"{route}: contains removed tracking content: {forbidden}")
+    if route == "/":
+        check_homepage_structure(body)
+    if route == "/.well-known/security.txt":
+        fields = dict(line.split(": ", 1) for line in body.splitlines() if ": " in line and not line.startswith("#"))
+        try:
+            expiry = datetime.fromisoformat(fields.get("Expires", "").replace("Z", "+00:00"))
+            if expiry.tzinfo is None or expiry <= datetime.now(timezone.utc):
+                errors.append(f"{route}: Expires must be a future timestamp with a timezone")
+        except ValueError:
+            errors.append(f"{route}: missing or invalid Expires timestamp")
     if len(errors) == previous_errors:
         print(f"OK {route}")
 

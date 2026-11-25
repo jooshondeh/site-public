@@ -1,0 +1,147 @@
+{
+  "plans": [
+    {
+      "key": "essentials",
+      "name": "Managed IT Essentials",
+      "short": "Essentials",
+      "badge": "Essential coverage",
+      "description": "Reliable maintenance, managed protection, and everyday support for a dependable IT foundation.",
+      "recommended": false
+    },
+    {
+      "key": "standard",
+      "name": "Managed IT Standard",
+      "short": "Standard",
+      "badge": "Recommended",
+      "description": "Priority support, regular recovery testing, and proactive planning to help reduce disruption.",
+      "recommended": true
+    },
+    {
+      "key": "premium",
+      "name": "Managed IT Premium",
+      "short": "Premium",
+      "badge": "Expanded coverage",
+      "description": "More frequent oversight and continuity planning for practices with more complex operational needs.",
+      "recommended": false
+    }
+  ],
+  "features": [
+    {
+      "key": "remote-support",
+      "name": "Remote IT support",
+      "values": [
+        "Included",
+        "Priority support",
+        "Highest-priority support"
+      ]
+    },
+    {
+      "key": "maintenance",
+      "name": "Routine maintenance & updates",
+      "values": [
+        "Included",
+        "Included",
+        "Included"
+      ]
+    },
+    {
+      "key": "endpoint-protection",
+      "name": "Managed endpoint protection",
+      "values": [
+        "Included",
+        "Included",
+        "Included"
+      ]
+    },
+    {
+      "key": "monitoring-alerts",
+      "name": "Monitoring & alert response",
+      "values": [
+        "Continuous monitoring; business-hours review",
+        "Continuous monitoring; priority business-hours review",
+        "Continuous monitoring; priority business-hours review and escalation"
+      ]
+    },
+    {
+      "key": "backup-management",
+      "name": "Backup management & verification",
+      "values": [
+        "Included",
+        "Included",
+        "Included"
+      ]
+    },
+    {
+      "key": "restore-testing",
+      "name": "Sample restoration testing",
+      "values": [
+        "Annual",
+        "Quarterly",
+        "Quarterly + annual recovery-readiness review"
+      ]
+    },
+    {
+      "key": "backup-reporting",
+      "name": "Backup status reporting",
+      "values": [
+        "On request",
+        "Quarterly",
+        "Monthly"
+      ]
+    },
+    {
+      "key": "vendor-coordination",
+      "name": "Dental software & vendor coordination",
+      "values": [
+        "Basic assistance",
+        "Coordinated support",
+        "Priority coordination"
+      ]
+    },
+    {
+      "key": "onsite-maintenance",
+      "name": "Preventive on-site maintenance",
+      "values": [
+        "Separately quoted",
+        "One planned visit per year",
+        "Two planned visits per year"
+      ]
+    },
+    {
+      "key": "technology-planning",
+      "name": "Technology & lifecycle planning",
+      "values": [
+        "Annual review",
+        "Annual technology plan",
+        "Quarterly technology review"
+      ]
+    },
+    {
+      "key": "warranty-coordination",
+      "name": "Manufacturer warranty coordination",
+      "values": [
+        "Separately quoted",
+        "Included for covered equipment",
+        "Priority coordination for covered equipment"
+      ]
+    },
+    {
+      "key": "loaner-equipment",
+      "name": "Temporary loaner equipment",
+      "values": [
+        "Rental by agreement",
+        "By availability and agreement",
+        "Priority access, by availability and agreement"
+      ]
+    },
+    {
+      "key": "after-hours",
+      "name": "Critical after-hours response",
+      "values": [
+        "Separately contracted",
+        "Separately contracted",
+        "Available when included in the agreement"
+      ]
+    }
+  ]
+}

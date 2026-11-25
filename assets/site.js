@@ -7,7 +7,8 @@
     element?.scrollIntoView({ behavior: reducedMotion.matches ? 'auto' : 'smooth', block });
   };
 
-  // Preserve valid section URLs on refresh. Pages without a section hash start at top.
+  // Preserve every real in-page destination on refresh, including comparison,
+  // FAQ and skip-link targets that are not part of the primary navigation.
   const navigationEntry = performance.getEntriesByType?.('navigation')?.[0];
   const isPageReload =
     navigationEntry?.type === 'reload' ||
@@ -32,7 +33,7 @@
       return hash;
     }
   };
-  const isValidSectionHash = (id) => sectionHashIds.has(id) && !!document.getElementById(id);
+  const isValidSectionHash = (id) => Boolean(id && document.getElementById(id));
 
   const scrollReloadToTop = () => {
     if (!isPageReload) return;
@@ -224,6 +225,10 @@
   };
 
   const updateSectionUrl = (sectionId) => {
+    const fragment = currentHashId();
+    // Native anchor navigation may scroll before hashchange fires. Keep its
+    // precise destination while still updating the highlighted nav item.
+    if (isValidSectionHash(fragment) && !sectionHashIds.has(fragment)) return;
     if (!sectionId || sectionId === currentSectionId) return;
     currentSectionId = sectionId;
 
@@ -272,6 +277,14 @@
     });
   };
 
+  const releaseNamedFragment = () => {
+    const fragment = currentHashId();
+    if (!isValidSectionHash(fragment) || sectionHashIds.has(fragment)) return;
+    history.replaceState(history.state, document.title, `${window.location.pathname}${window.location.search}`);
+    currentSectionId = null;
+    scheduleSectionUpdate();
+  };
+
   if (sectionLinks.length) {
     const initialHash = currentHashId();
     setActiveLink({ updateUrl: !isValidSectionHash(initialHash) });
@@ -279,6 +292,23 @@
     // Keep the menu available while its links are scrolled into view by touch
     // or keyboard. Selection, Escape, outside clicks and breakpoint changes close it.
     window.addEventListener('scroll', scheduleSectionUpdate, { passive: true });
+
+    // A deliberate page scroll resumes section URLs. Programmatic/native
+    // anchor positioning alone must not discard a more specific deep link.
+    window.addEventListener('wheel', releaseNamedFragment, { passive: true });
+    window.addEventListener('touchmove', releaseNamedFragment, { passive: true });
+    document.addEventListener('keydown', (event) => {
+      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return;
+      const target = event.target instanceof Element ? event.target : null;
+      if (target?.closest('input, textarea, select, [contenteditable="true"]')) return;
+      if (event.key === ' ' && target?.closest('a, button, summary, [role="button"]')) return;
+      if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) {
+        releaseNamedFragment();
+      }
+    });
+    document.addEventListener('pointerdown', (event) => {
+      if (event.clientX >= document.documentElement.clientWidth) releaseNamedFragment();
+    }, { passive: true });
 
     window.addEventListener('resize', scheduleSectionUpdate);
     window.addEventListener('pageshow', () => setActiveLink({
@@ -431,6 +461,86 @@
       window.setTimeout(() => nameField?.focus({ preventScroll: true }), 450);
     });
   });
+
+  const interestField = document.getElementById('contact-interest');
+  const planSelectionStatus = document.querySelector('[data-plan-selection-status]');
+  const selectablePlans = new Set([
+    'Managed IT Essentials',
+    'Managed IT Standard',
+    'Managed IT Premium'
+  ]);
+  let cancelPlanFocus = () => {};
+
+  if (interestField instanceof HTMLSelectElement) {
+    const announcePlanSelection = () => {
+      if (!planSelectionStatus) return;
+      planSelectionStatus.textContent = selectablePlans.has(interestField.value)
+        ? `${interestField.value} selected. You can change this before sending.`
+        : '';
+    };
+    interestField.addEventListener('change', announcePlanSelection);
+    interestField.form?.addEventListener('reset', () => {
+      cancelPlanFocus();
+      if (planSelectionStatus) planSelectionStatus.textContent = '';
+    });
+
+    document.querySelectorAll('a[data-plan-select][href="#contact-form"]').forEach((link) => {
+      link.addEventListener('click', (event) => {
+        if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button > 0) return;
+        const plan = link.dataset.planSelect || '';
+        const matchingOption = Array.from(interestField.options).find((option) => option.value === plan && !option.disabled);
+        if (!selectablePlans.has(plan) || !matchingOption) return;
+
+        // Leave the normal #contact-form navigation intact. No other field values
+        // change, and the selected interest is submitted by the native form.
+        interestField.value = plan;
+        interestField.dispatchEvent(new Event('change', { bubbles: true }));
+        closeNav();
+        cancelPlanFocus();
+
+        const focusTarget = nameField && !nameField.value.trim() ? nameField : interestField;
+        let settleTimer;
+        let deadlineTimer;
+        const cancel = () => {
+          window.clearTimeout(settleTimer);
+          window.clearTimeout(deadlineTimer);
+          window.removeEventListener('scroll', waitForScroll);
+        };
+        const finish = () => {
+          cancel();
+          // Do not steal focus if the visitor has already moved to a field.
+          const active = document.activeElement;
+          if (active === link || active === document.body || active === document.getElementById('contact-form')) {
+            const bounds = focusTarget.getBoundingClientRect();
+            const viewportTop = window.visualViewport?.offsetTop || 0;
+            const viewportBottom = viewportTop + (window.visualViewport?.height || window.innerHeight);
+            const visibleTop = Math.max(viewportTop, header?.getBoundingClientRect().bottom || 0) + 16;
+            if (bounds.top < visibleTop || bounds.bottom > viewportBottom - 16) {
+              // The interest select sits farther down on small screens. Reveal
+              // it after the native anchor settles, without a second animation.
+              const availableHeight = Math.max(0, viewportBottom - 16 - visibleTop);
+              const targetOffset = visibleTop + Math.max(0, (availableHeight - bounds.height) / 2);
+              window.scrollTo({
+                top: Math.max(0, window.scrollY + bounds.top - targetOffset),
+                behavior: 'instant'
+              });
+            }
+            focusTarget.focus({ preventScroll: true });
+          }
+        };
+        const waitForScroll = () => {
+          window.clearTimeout(settleTimer);
+          settleTimer = window.setTimeout(finish, 120);
+        };
+        cancelPlanFocus = cancel;
+        window.addEventListener('scroll', waitForScroll, { passive: true });
+        // A quiet interval handles smooth scroll and a same-fragment click;
+        // the deadline prevents a pending listener if scrolling never settles.
+        waitForScroll();
+        deadlineTimer = window.setTimeout(finish, 1800);
+      });
+    });
+  }
 
   const form = document.querySelector('[data-contact-form]');
   if (form) {
@@ -852,6 +962,7 @@
       backToTop.setAttribute('aria-hidden', String(!visible));
     };
     backToTop.addEventListener('click', () => {
+      releaseNamedFragment();
       window.scrollTo({ top: 0, behavior: reducedMotion.matches ? 'auto' : 'smooth' });
     });
     updateBackToTop();

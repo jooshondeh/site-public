@@ -6,6 +6,8 @@ import argparse
 import json
 import re
 import struct
+import subprocess
+import sys
 import xml.etree.ElementTree as ET
 
 parser = argparse.ArgumentParser(description="Validate the NexGen Binary production website.")
@@ -15,8 +17,8 @@ args = parser.parse_args()
 
 ROOT = Path(args.root).resolve()
 PRODUCTION_ORIGIN = "https://nexgenbinary.com"
-BUILD = "production-2026-11-25-v10-layout"
-CACHE = "20261125layout10"
+BUILD = "production-2026-11-25-v11-service-plans"
+CACHE = "20261125plans11"
 RELEASE_DATE = "2026-11-25"
 PHONE_HREF = "tel:+18044609640"
 PHONE_TEXT = "(804) 460-9640"
@@ -34,7 +36,8 @@ SOURCE_REQUIRED = [
     "favicon-512x512.png", "apple-touch-icon.png",
 ]
 DEPLOYMENT_ONLY_REQUIRED = ["CNAME", ".nojekyll", ".well-known/security.txt"]
-REQUIRED = SOURCE_REQUIRED + (DEPLOYMENT_ONLY_REQUIRED if args.clean else [])
+REPOSITORY_ONLY_REQUIRED = ["scripts/service-plans.json", "scripts/render_service_plans.py"]
+REQUIRED = SOURCE_REQUIRED + (DEPLOYMENT_ONLY_REQUIRED if args.clean else REPOSITORY_ONLY_REQUIRED)
 FORBIDDEN_DEPLOYED = [
     "_astro", "docs", "scripts", ".github", "site.webmanifest",
     "assets/analytics.js", "assets/analytics-id.js", "assets/analytics-config.js",
@@ -50,6 +53,8 @@ if args.clean:
             raise SystemExit(f"Repository-only or obsolete item entered deployment: {item}")
 
 class Parser(HTMLParser):
+    VOID_TAGS = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"}
+
     def __init__(self):
         super().__init__()
         self.refs = []
@@ -68,9 +73,16 @@ class Parser(HTMLParser):
         self.logo_images = []
         self.json_ld = []
         self.in_json_ld = False
+        # A small element tree supports structural checks without an HTML dependency.
+        self.elements = []
+        self.stack = []
 
     def handle_starttag(self, tag, attrs):
         data = dict(attrs)
+        element = {"tag": tag, "attrs": data, "parent": self.stack[-1] if self.stack else None, "text": []}
+        self.elements.append(element)
+        if tag not in self.VOID_TAGS:
+            self.stack.append(element)
         element_id = data.get("id")
         if element_id:
             if element_id in self.ids:
@@ -120,12 +132,199 @@ class Parser(HTMLParser):
             self.in_json_ld = False
         if tag == "span" and self.in_phone_display:
             self.in_phone_display = False
+        for position in range(len(self.stack) - 1, -1, -1):
+            if self.stack[position]["tag"] == tag:
+                del self.stack[position:]
+                break
 
     def handle_data(self, data):
         if self.in_phone_display and self.phone_display_texts:
             self.phone_display_texts[-1] += data
         if self.in_json_ld:
             self.json_ld[-1] += data
+        if not any(element["tag"] in ("script", "style", "svg") for element in self.stack):
+            for element in self.stack:
+                element["text"].append(data)
+
+
+def element_text(element):
+    """Normalize readable text without depending on line breaks or nested spans."""
+    return " ".join(" ".join(element["text"]).split())
+
+
+def inside(element, ancestor):
+    parent = element["parent"]
+    while parent is not None:
+        if parent is ancestor:
+            return True
+        parent = parent["parent"]
+    return False
+
+
+def public_copy_issues(parsed):
+    """Inspect readable page copy, not JavaScript, SVG paths, CSS, or metadata."""
+    body = next((element for element in parsed.elements if element["tag"] == "body"), None)
+    if body is None:
+        return ["missing body element"]
+    copy = element_text(body)
+    issues = []
+    if re.search(r"[$£€]\s*\d|\b(?:USD|GBP|EUR)\s*\d|\b\d[\d,.]*\s*(?:USD|GBP|EUR)\b", copy, re.IGNORECASE):
+        issues.append("numeric public pricing found; this release uses custom quotes")
+    if re.search(r"\b\d[\d,.]*\s*(?:/|per\s+)(?:month|mo\b|workstation|server|user)\b", copy, re.IGNORECASE):
+        issues.append("numeric recurring rates found in public copy")
+    obsolete = {
+        "Managed IT Complete": r"\bManaged\s+IT\s+Complete\b",
+        "three-year hardware warranty": r"\b(?:three|3)[\s-]+year\b[^.]{0,40}\bwarrant(?:y|ies)\b",
+        "included server loaners": r"\b(?:server loaners?|loaner servers?)\b[^.]{0,60}\bincluded\b|\bloaner equipment\b[^.]{0,40}\bincluded\b[^.]{0,30}\bservers\b",
+        "internal rate guidance": r"\binternal\s+(?:monthly\s+minimums?|workstation\s+rates?|server\s+rates?)\b",
+    }
+    for label, pattern in obsolete.items():
+        if re.search(pattern, copy, re.IGNORECASE):
+            issues.append(f"obsolete or internal offer text found: {label}")
+    return issues
+
+
+def validate_plan_structure(parsed):
+    """Check the usable comparison, mobile parity, quote links, and form choice."""
+    issues = []
+    names = {
+        "essentials": "Managed IT Essentials",
+        "standard": "Managed IT Standard",
+        "premium": "Managed IT Premium",
+    }
+    features = [
+        "remote-support", "maintenance", "endpoint-protection", "monitoring-alerts",
+        "backup-management", "restore-testing", "backup-reporting", "vendor-coordination",
+        "onsite-maintenance", "technology-planning", "warranty-coordination", "loaner-equipment", "after-hours",
+    ]
+    cards = [e for e in parsed.elements if e["tag"] == "article" and "plan-summary" in e["attrs"].get("class", "").split()]
+    if len(cards) != 3 or sorted(e["attrs"].get("data-plan", "") for e in cards) != sorted(names):
+        issues.append("expected exactly three plan summaries: essentials, standard, premium")
+    recommended = [e for e in cards if e["attrs"].get("data-recommended") == "true"]
+    if len(recommended) != 1 or recommended[0]["attrs"].get("data-plan") != "standard":
+        issues.append("Standard must be the only recommended plan")
+    for card in cards:
+        key = card["attrs"].get("data-plan")
+        expected_name = names.get(key)
+        headings = [element_text(e) for e in parsed.elements if e["tag"] in ("h2", "h3", "h4") and inside(e, card)]
+        if expected_name not in headings:
+            issues.append(f"plan {key!r} is missing its full heading")
+        if element_text(card).count("Custom monthly quote") != 1:
+            issues.append(f"plan {key!r} must show Custom monthly quote once")
+        links = [e for e in parsed.elements if "data-plan-select" in e["attrs"] and inside(e, card)]
+        if len(links) != 1 or links[0]["tag"] != "a" or links[0]["attrs"].get("data-plan-select") != expected_name or links[0]["attrs"].get("href") != "#contact-form":
+            issues.append(f"plan {key!r} must have one matching native quote link to #contact-form")
+
+    links = [e for e in parsed.elements if "data-plan-select" in e["attrs"]]
+    if len(links) != 6:
+        issues.append("expected six plan quote links across summaries and table footer")
+    for name in names.values():
+        matches = [e for e in links if e["attrs"].get("data-plan-select") == name]
+        if len(matches) != 2 or any(e["tag"] != "a" or e["attrs"].get("href") != "#contact-form" for e in matches):
+            issues.append(f"{name} requires two native quote links to #contact-form")
+
+    containers = [e for e in parsed.elements if e["attrs"].get("id") == "plan-comparison"]
+    if len(containers) != 1 or containers[0]["tag"] != "div" or "plan-comparison-content" not in containers[0]["attrs"].get("class", "").split():
+        issues.append("plan-comparison must be a shared div.plan-comparison-content anchor for all screen sizes")
+    elif any(not inside(card, containers[0]) for card in cards):
+        issues.append("the shared comparison anchor must contain all three plan summaries")
+    tables = [e for e in parsed.elements if e["attrs"].get("id") == "plan-comparison-table"]
+    table_values = {}
+    if len(tables) != 1 or tables[0]["tag"] != "table" or "plan-comparison" not in tables[0]["attrs"].get("class", "").split():
+        issues.append("expected one semantic table with id plan-comparison-table and class plan-comparison")
+    else:
+        table = tables[0]
+        if len(containers) == 1 and not inside(table, containers[0]):
+            issues.append("the comparison table must be inside the shared plan-comparison anchor")
+        captions = [e for e in parsed.elements if e["tag"] == "caption" and inside(e, table)]
+        if len(captions) != 1 or not element_text(captions[0]):
+            issues.append("plan comparison requires a readable caption")
+        heads = [e for e in parsed.elements if e["tag"] == "thead" and inside(e, table)]
+        header_rows = [e for e in parsed.elements if e["tag"] == "tr" and any(inside(e, head) for head in heads)]
+        columns = [e for e in parsed.elements if e["tag"] in ("th", "td") and any(e["parent"] is row for row in header_rows)]
+        if len(heads) != 1 or len(header_rows) != 1 or len(columns) != 4 or any(e["tag"] != "th" or e["attrs"].get("scope") != "col" for e in columns):
+            issues.append("plan comparison header must have one feature column and three plan columns using th scope=col")
+        column_ids = [e["attrs"].get("id") for e in columns]
+        if len(column_ids) != 4 or any(not value for value in column_ids) or len(set(column_ids)) != 4:
+            issues.append("all four comparison column headers require unique IDs")
+        bodies = [e for e in parsed.elements if e["tag"] == "tbody" and inside(e, table)]
+        rows = [e for e in parsed.elements if e["tag"] == "tr" and any(inside(e, body) for body in bodies)]
+        row_keys = [row["attrs"].get("data-feature", "") for row in rows]
+        if len(rows) != 13 or sorted(row_keys) != sorted(features):
+            issues.append("comparison body must contain the 13 distinct agreed service features")
+        for row in rows:
+            key = row["attrs"].get("data-feature", "unknown")
+            cells = [e for e in parsed.elements if e["parent"] is row and e["tag"] in ("th", "td")]
+            if len(cells) != 4 or cells[0]["tag"] != "th" or cells[0]["attrs"].get("scope") != "row" or any(e["tag"] != "td" for e in cells[1:]):
+                issues.append(f"comparison feature {key}: expected a row header and three data cells")
+                continue
+            row_id = cells[0]["attrs"].get("id")
+            if not row_id or not element_text(cells[0]):
+                issues.append(f"comparison feature {key}: row header needs an ID and readable label")
+            for position, cell in enumerate(cells[1:], start=1):
+                refs = set(cell["attrs"].get("headers", "").split())
+                if len(column_ids) == 4 and (not {row_id, column_ids[position]}.issubset(refs) or not refs.issubset(parsed.ids)):
+                    issues.append(f"comparison feature {key}: data cell {position} must reference its row and column headers")
+                if not element_text(cell):
+                    issues.append(f"comparison feature {key}: data cell {position} is empty")
+            table_values[key] = [element_text(cell) for cell in cells]
+        feet = [e for e in parsed.elements if e["tag"] == "tfoot" and inside(e, table)]
+        footer_links = [e for e in links if any(inside(e, foot) for foot in feet)]
+        if len(feet) != 1 or len(footer_links) != 3:
+            issues.append("comparison footer requires one quote link for each plan")
+
+    for card in cards:
+        key = card["attrs"].get("data-plan")
+        mobile = [e for e in parsed.elements if e["tag"] == "details" and "plan-mobile-details" in e["attrs"].get("class", "").split() and inside(e, card)]
+        if len(mobile) != 1:
+            issues.append(f"plan {key!r} requires one native mobile details disclosure")
+            continue
+        summaries = [e for e in parsed.elements if e["tag"] == "summary" and e["parent"] is mobile[0]]
+        if len(summaries) != 1 or not element_text(summaries[0]):
+            issues.append(f"plan {key!r} mobile disclosure requires a readable summary")
+        lists = [e for e in parsed.elements if e["tag"] == "dl" and inside(e, mobile[0])]
+        mobile_rows = [e for e in parsed.elements if e["tag"] == "div" and "data-feature" in e["attrs"] and any(inside(e, listing) for listing in lists)]
+        if len(lists) != 1 or len(mobile_rows) != 13 or sorted(e["attrs"].get("data-feature", "") for e in mobile_rows) != sorted(features):
+            issues.append(f"plan {key!r} mobile details must contain all 13 agreed features")
+        column = list(names).index(key) + 1 if key in names else None
+        for row in mobile_rows:
+            feature = row["attrs"].get("data-feature")
+            terms = [e for e in parsed.elements if e["tag"] == "dt" and e["parent"] is row]
+            definitions = [e for e in parsed.elements if e["tag"] == "dd" and e["parent"] is row]
+            if len(terms) != 1 or len(definitions) != 1:
+                issues.append(f"plan {key!r}, mobile feature {feature}: expected one dt and one dd")
+                continue
+            values = table_values.get(feature)
+            if values and column is not None and (element_text(terms[0]) != values[0] or element_text(definitions[0]) != values[column]):
+                issues.append(f"plan {key!r}, mobile feature {feature}: label/value differs from desktop comparison")
+
+    interests = [e for e in parsed.elements if e["attrs"].get("id") == "contact-interest"]
+    if len(interests) != 1 or interests[0]["tag"] != "select" or interests[0]["attrs"].get("name") != "interest":
+        issues.append("contact form requires native select id=contact-interest name=interest")
+    else:
+        interest = interests[0]
+        options = [e["attrs"].get("value", element_text(e)) for e in parsed.elements if e["tag"] == "option" and inside(e, interest)]
+        expected_options = set(names.values()) | {"Help me choose", "Project or one-time support"}
+        if set(options) - {""} != expected_options or len(options) != len(set(options)):
+            issues.append("contact interest choices must match the three plan names, Help me choose, and Project or one-time support")
+        if not any(e["tag"] == "label" and e["attrs"].get("for") == "contact-interest" and element_text(e) for e in parsed.elements):
+            issues.append("contact interest select requires a visible associated label")
+        if not any(e["tag"] == "form" and inside(interest, e) and e["attrs"].get("action") == "https://formspree.io/f/mdalpbzo" for e in parsed.elements):
+            issues.append("contact interest must be inside the existing Formspree contact form")
+
+    for section_id in ("additional-services", "coverage-questions"):
+        sections = [e for e in parsed.elements if e["tag"] == "section" and e["attrs"].get("id") == section_id]
+        if len(sections) != 1:
+            issues.append(f"expected one section #{section_id}")
+        elif section_id == "coverage-questions":
+            disclosures = [e for e in parsed.elements if e["tag"] == "details" and inside(e, sections[0])]
+            if not disclosures:
+                issues.append("coverage questions must use native details disclosures")
+            for detail in disclosures:
+                summaries = [e for e in parsed.elements if e["tag"] == "summary" and e["parent"] is detail]
+                if len(summaries) != 1 or not element_text(summaries[0]):
+                    issues.append("each coverage question requires a readable summary")
+    return issues
 
 
 def local_target(source_path, ref):
@@ -205,6 +404,8 @@ for path in html_files:
 
     if parsed.duplicates:
         errors.append(f"{relative} duplicate IDs: {sorted(parsed.duplicates)}")
+    for issue in public_copy_issues(parsed):
+        errors.append(f"{relative}: {issue}")
     if parsed.images_without_alt:
         errors.append(f"{relative} images missing alt: {parsed.images_without_alt}")
     for attribute, referenced_id, owner in parsed.aria_refs:
@@ -347,8 +548,8 @@ if "https://js.hcaptcha.com/1/api.js" in index:
 for marker in ('data-hcaptcha-lazy', 'data-hcaptcha-load-status', 'role="status"', 'aria-live="polite"'):
     if marker not in index:
         errors.append(f"index.html missing deferred verification marker: {marker}")
-if index.count('class="plan-row"') != 24:
-    errors.append("index.html must contain exactly 24 service-plan rows")
+for issue in validate_plan_structure(documents[ROOT / "index.html"]):
+    errors.append(f"index.html: {issue}")
 
 privacy = (ROOT / "privacy/index.html").read_text(encoding="utf-8")
 for marker in (
@@ -417,13 +618,25 @@ except ET.ParseError as exc:
 if args.clean and (ROOT / "CNAME").read_text(encoding="utf-8").strip() != "nexgenbinary.com":
     errors.append("CNAME is not configured for nexgenbinary.com")
 
+if not args.clean:
+    try:
+        result = subprocess.run(
+            [sys.executable, str(ROOT / "scripts/render_service_plans.py"), "--check"],
+            cwd=ROOT, capture_output=True, text=True, timeout=15,
+        )
+        if result.returncode:
+            detail = (result.stderr or result.stdout).strip()
+            errors.append(f"Service-plan source/render parity check failed: {detail or 'renderer returned a failure'}")
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        errors.append(f"Could not verify canonical service-plan content: {exc}")
+
 if errors:
     raise SystemExit("\n".join(errors))
 
 print(
     f"Validated {len(html_files)} HTML files, {phone_count} native phone links, "
     f"{logo_count} updated logos, {anchor_count} local anchors, {aria_count} ARIA references, "
-    "asset versions, CSS custom properties, blue branding, business hours, social links, "
+    "three-plan comparison and mobile parity, quote routing, asset versions, CSS custom properties, blue branding, business hours, social links, "
     "no tracking code, SEO metadata, and integration hooks. "
     "Static checks do not verify external form delivery or bookings."
 )
