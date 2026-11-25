@@ -370,6 +370,18 @@
 
   const bookingModal = document.getElementById('nb-booking-modal');
   const bookingFrame = document.getElementById('nb-booking-iframe');
+  const bookingTitle = bookingModal?.querySelector('.nb-booking-title');
+  const bookingSubtitle = bookingModal?.querySelector('.nb-booking-subtitle');
+  const bookingPlanContext = bookingModal?.querySelector('[data-booking-plan-context]');
+  const bookingDefaults = {
+    title: bookingTitle?.textContent || '',
+    subtitle: bookingSubtitle?.textContent || ''
+  };
+  const bookingPlans = new Set([
+    'Managed IT Essentials',
+    'Managed IT Standard',
+    'Managed IT Premium'
+  ]);
   const bookingOpeners = Array.from(document.querySelectorAll('[data-booking-open]'));
   bookingOpeners.forEach((opener) => {
     const bookingUrl = opener.getAttribute('href') || '';
@@ -384,13 +396,33 @@
   const bookingFocusable = () => bookingModal
     ? Array.from(bookingModal.querySelectorAll('a[href], button:not([disabled]), iframe, [tabindex]:not([tabindex="-1"])'))
     : [];
+  const isVisibleBookingOpener = (opener) => {
+    if (!(opener instanceof HTMLElement) || !opener.isConnected || !opener.getClientRects().length) return false;
+    if (opener.closest('[hidden], [inert], [aria-hidden="true"]')) return false;
+    const visibility = window.getComputedStyle(opener).visibility;
+    return visibility !== 'hidden' && visibility !== 'collapse';
+  };
 
   const openBooking = (event) => {
     if (!bookingModal || !bookingFrame) return;
-    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button > 0) return;
+    if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button > 0) return;
     event.preventDefault();
     if (bookingModal.classList.contains('is-open')) return;
     bookingReturnFocus = event.currentTarget || document.activeElement;
+    const requestedPlan = event.currentTarget?.dataset?.bookingPlan || '';
+    const plan = bookingPlans.has(requestedPlan) ? requestedPlan : '';
+    if (bookingTitle) bookingTitle.textContent = plan ? 'Request a Quote' : bookingDefaults.title;
+    if (bookingSubtitle) {
+      bookingSubtitle.textContent = plan
+        ? 'Choose a convenient time to discuss your practice and the right level of support.'
+        : bookingDefaults.subtitle;
+    }
+    if (bookingPlanContext) {
+      bookingPlanContext.textContent = plan;
+      bookingPlanContext.hidden = !plan;
+    }
+    // Plan context stays in this dialog; the booking provider URL and form
+    // values are unchanged, and generic openers always restore the defaults.
     if (!bookingFrame.getAttribute('src')) bookingFrame.src = bookingFrame.dataset.src || '';
     closeNav();
     bookingModal.classList.add('is-open');
@@ -419,9 +451,30 @@
     document.body.classList.remove('nb-modal-open');
     const returnFocus = bookingReturnFocus;
     bookingReturnFocus = null;
-    if (returnFocus instanceof HTMLElement && returnFocus.isConnected) {
-      window.setTimeout(() => returnFocus.focus({ preventScroll: true }), 0);
-    }
+    window.setTimeout(() => {
+      if (bookingModal.classList.contains('is-open')) return;
+      if (isVisibleBookingOpener(returnFocus)) {
+        returnFocus.focus({ preventScroll: true });
+        return;
+      }
+      // A rotated or resized viewport can hide the comparison-table opener.
+      // Prefer the visible summary button for that same plan, then a generic
+      // booking link; only this fallback path may reveal a different control.
+      const plan = returnFocus?.dataset?.bookingPlan || '';
+      const matchingOpener = bookingPlans.has(plan)
+        ? bookingOpeners.find((opener) => opener.dataset.bookingPlan === plan && isVisibleBookingOpener(opener))
+        : null;
+      const fallbackOpener = matchingOpener || bookingOpeners.find((opener) => !opener.dataset.bookingPlan && isVisibleBookingOpener(opener));
+      if (!fallbackOpener) return;
+      const bounds = fallbackOpener.getBoundingClientRect();
+      const viewportTop = window.visualViewport?.offsetTop || 0;
+      const viewportBottom = viewportTop + (window.visualViewport?.height || window.innerHeight);
+      const visibleTop = Math.max(viewportTop, header?.getBoundingClientRect().bottom || 0) + 16;
+      if (bounds.top < visibleTop || bounds.bottom > viewportBottom - 16) {
+        fallbackOpener.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'nearest' });
+      }
+      fallbackOpener.focus({ preventScroll: true });
+    }, 0);
   };
 
   bookingOpeners.forEach((opener) => opener.addEventListener('click', openBooking));
@@ -453,94 +506,6 @@
       first.focus();
     }
   });
-
-  const consultationLinks = document.querySelectorAll('[data-focus-contact]');
-  const nameField = document.getElementById('contact-name');
-  consultationLinks.forEach((link) => {
-    link.addEventListener('click', () => {
-      window.setTimeout(() => nameField?.focus({ preventScroll: true }), 450);
-    });
-  });
-
-  const interestField = document.getElementById('contact-interest');
-  const planSelectionStatus = document.querySelector('[data-plan-selection-status]');
-  const selectablePlans = new Set([
-    'Managed IT Essentials',
-    'Managed IT Standard',
-    'Managed IT Premium'
-  ]);
-  let cancelPlanFocus = () => {};
-
-  if (interestField instanceof HTMLSelectElement) {
-    const announcePlanSelection = () => {
-      if (!planSelectionStatus) return;
-      planSelectionStatus.textContent = selectablePlans.has(interestField.value)
-        ? `${interestField.value} selected. You can change this before sending.`
-        : '';
-    };
-    interestField.addEventListener('change', announcePlanSelection);
-    interestField.form?.addEventListener('reset', () => {
-      cancelPlanFocus();
-      if (planSelectionStatus) planSelectionStatus.textContent = '';
-    });
-
-    document.querySelectorAll('a[data-plan-select][href="#contact-form"]').forEach((link) => {
-      link.addEventListener('click', (event) => {
-        if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button > 0) return;
-        const plan = link.dataset.planSelect || '';
-        const matchingOption = Array.from(interestField.options).find((option) => option.value === plan && !option.disabled);
-        if (!selectablePlans.has(plan) || !matchingOption) return;
-
-        // Leave the normal #contact-form navigation intact. No other field values
-        // change, and the selected interest is submitted by the native form.
-        interestField.value = plan;
-        interestField.dispatchEvent(new Event('change', { bubbles: true }));
-        closeNav();
-        cancelPlanFocus();
-
-        const focusTarget = nameField && !nameField.value.trim() ? nameField : interestField;
-        let settleTimer;
-        let deadlineTimer;
-        const cancel = () => {
-          window.clearTimeout(settleTimer);
-          window.clearTimeout(deadlineTimer);
-          window.removeEventListener('scroll', waitForScroll);
-        };
-        const finish = () => {
-          cancel();
-          // Do not steal focus if the visitor has already moved to a field.
-          const active = document.activeElement;
-          if (active === link || active === document.body || active === document.getElementById('contact-form')) {
-            const bounds = focusTarget.getBoundingClientRect();
-            const viewportTop = window.visualViewport?.offsetTop || 0;
-            const viewportBottom = viewportTop + (window.visualViewport?.height || window.innerHeight);
-            const visibleTop = Math.max(viewportTop, header?.getBoundingClientRect().bottom || 0) + 16;
-            if (bounds.top < visibleTop || bounds.bottom > viewportBottom - 16) {
-              // The interest select sits farther down on small screens. Reveal
-              // it after the native anchor settles, without a second animation.
-              const availableHeight = Math.max(0, viewportBottom - 16 - visibleTop);
-              const targetOffset = visibleTop + Math.max(0, (availableHeight - bounds.height) / 2);
-              window.scrollTo({
-                top: Math.max(0, window.scrollY + bounds.top - targetOffset),
-                behavior: 'instant'
-              });
-            }
-            focusTarget.focus({ preventScroll: true });
-          }
-        };
-        const waitForScroll = () => {
-          window.clearTimeout(settleTimer);
-          settleTimer = window.setTimeout(finish, 120);
-        };
-        cancelPlanFocus = cancel;
-        window.addEventListener('scroll', waitForScroll, { passive: true });
-        // A quiet interval handles smooth scroll and a same-fragment click;
-        // the deadline prevents a pending listener if scrolling never settles.
-        waitForScroll();
-        deadlineTimer = window.setTimeout(finish, 1800);
-      });
-    });
-  }
 
   const form = document.querySelector('[data-contact-form]');
   if (form) {

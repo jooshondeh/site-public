@@ -17,8 +17,8 @@ args = parser.parse_args()
 
 ROOT = Path(args.root).resolve()
 PRODUCTION_ORIGIN = "https://nexgenbinary.com"
-BUILD = "production-2026-11-25-v11-service-plans"
-CACHE = "20261125plans11"
+BUILD = "production-2026-11-25-v12-brand-booking"
+CACHE = "20261125brand12"
 RELEASE_DATE = "2026-11-25"
 PHONE_HREF = "tel:+18044609640"
 PHONE_TEXT = "(804) 460-9640"
@@ -161,6 +161,15 @@ def inside(element, ancestor):
     return False
 
 
+def validate_header_slogan(parsed):
+    headers = [e for e in parsed.elements if e["tag"] == "header" and "site-header" in e["attrs"].get("class", "").split()]
+    brands = [e for e in parsed.elements if e["tag"] == "a" and "brand" in e["attrs"].get("class", "").split() and any(inside(e, header) for header in headers)]
+    slogans = [e for e in parsed.elements if "brand-tagline" in e["attrs"].get("class", "").split() and any(inside(e, brand) for brand in brands)]
+    if len(headers) != 1 or len(brands) != 1 or len(slogans) != 1 or element_text(slogans[0]) != "Virginia's Trusted IT Partner":
+        return ["header brand link must contain one brand-tagline reading Virginia's Trusted IT Partner"]
+    return []
+
+
 def public_copy_issues(parsed):
     """Inspect readable page copy, not JavaScript, SVG paths, CSS, or metadata."""
     body = next((element for element in parsed.elements if element["tag"] == "body"), None)
@@ -197,12 +206,28 @@ def validate_plan_structure(parsed):
         "backup-management", "restore-testing", "backup-reporting", "vendor-coordination",
         "onsite-maintenance", "technology-planning", "warranty-coordination", "loaner-equipment", "after-hours",
     ]
+    booking_url = "https://outlook.office.com/book/MeetNexGenBinary@nexgenbinary.com/"
+
+    def valid_quote_link(element, name):
+        attrs = element["attrs"]
+        return (
+            element["tag"] == "a" and attrs.get("data-booking-plan") == name
+            and "data-booking-open" in attrs and attrs.get("href") == booking_url
+            and attrs.get("target") == "_blank" and "noopener" in attrs.get("rel", "").split()
+            and attrs.get("aria-haspopup") == "dialog" and attrs.get("aria-controls") == "nb-booking-modal"
+        )
+
+    if any("data-plan-select" in e["attrs"] for e in parsed.elements):
+        issues.append("obsolete data-plan-select quote routing must be removed")
     cards = [e for e in parsed.elements if e["tag"] == "article" and "plan-summary" in e["attrs"].get("class", "").split()]
     if len(cards) != 3 or sorted(e["attrs"].get("data-plan", "") for e in cards) != sorted(names):
         issues.append("expected exactly three plan summaries: essentials, standard, premium")
     recommended = [e for e in cards if e["attrs"].get("data-recommended") == "true"]
     if len(recommended) != 1 or recommended[0]["attrs"].get("data-plan") != "standard":
         issues.append("Standard must be the only recommended plan")
+    mobile_containers = [e for e in parsed.elements if {"plan-summaries", "plan-mobile-summaries"}.issubset(e["attrs"].get("class", "").split())]
+    if len(mobile_containers) != 1 or any(not inside(card, mobile_containers[0]) for card in cards):
+        issues.append("all three mobile plans must be inside one plan-summaries.plan-mobile-summaries container")
     for card in cards:
         key = card["attrs"].get("data-plan")
         expected_name = names.get(key)
@@ -211,17 +236,17 @@ def validate_plan_structure(parsed):
             issues.append(f"plan {key!r} is missing its full heading")
         if element_text(card).count("Custom monthly quote") != 1:
             issues.append(f"plan {key!r} must show Custom monthly quote once")
-        links = [e for e in parsed.elements if "data-plan-select" in e["attrs"] and inside(e, card)]
-        if len(links) != 1 or links[0]["tag"] != "a" or links[0]["attrs"].get("data-plan-select") != expected_name or links[0]["attrs"].get("href") != "#contact-form":
-            issues.append(f"plan {key!r} must have one matching native quote link to #contact-form")
+        links = [e for e in parsed.elements if "data-booking-plan" in e["attrs"] and inside(e, card)]
+        if len(links) != 1 or not valid_quote_link(links[0], expected_name):
+            issues.append(f"plan {key!r} requires one accessible booking quote link with a native calendar fallback")
 
-    links = [e for e in parsed.elements if "data-plan-select" in e["attrs"]]
+    links = [e for e in parsed.elements if "data-booking-plan" in e["attrs"]]
     if len(links) != 6:
         issues.append("expected six plan quote links across summaries and table footer")
     for name in names.values():
-        matches = [e for e in links if e["attrs"].get("data-plan-select") == name]
-        if len(matches) != 2 or any(e["tag"] != "a" or e["attrs"].get("href") != "#contact-form" for e in matches):
-            issues.append(f"{name} requires two native quote links to #contact-form")
+        matches = [e for e in links if e["attrs"].get("data-booking-plan") == name]
+        if len(matches) != 2 or any(not valid_quote_link(e, name) for e in matches):
+            issues.append(f"{name} requires one desktop and one mobile booking quote link")
 
     containers = [e for e in parsed.elements if e["attrs"].get("id") == "plan-comparison"]
     if len(containers) != 1 or containers[0]["tag"] != "div" or "plan-comparison-content" not in containers[0]["attrs"].get("class", "").split():
@@ -237,8 +262,8 @@ def validate_plan_structure(parsed):
         if len(containers) == 1 and not inside(table, containers[0]):
             issues.append("the comparison table must be inside the shared plan-comparison anchor")
         captions = [e for e in parsed.elements if e["tag"] == "caption" and inside(e, table)]
-        if len(captions) != 1 or not element_text(captions[0]):
-            issues.append("plan comparison requires a readable caption")
+        if len(captions) != 1 or not element_text(captions[0]) or "sr-only" not in captions[0]["attrs"].get("class", "").split():
+            issues.append("plan comparison requires one readable, visually hidden sr-only caption")
         heads = [e for e in parsed.elements if e["tag"] == "thead" and inside(e, table)]
         header_rows = [e for e in parsed.elements if e["tag"] == "tr" and any(inside(e, head) for head in heads)]
         columns = [e for e in parsed.elements if e["tag"] in ("th", "td") and any(e["parent"] is row for row in header_rows)]
@@ -247,6 +272,21 @@ def validate_plan_structure(parsed):
         column_ids = [e["attrs"].get("id") for e in columns]
         if len(column_ids) != 4 or any(not value for value in column_ids) or len(set(column_ids)) != 4:
             issues.append("all four comparison column headers require unique IDs")
+        plan_headers = [e for e in columns if "data-plan-header" in e["attrs"]]
+        if len(plan_headers) != 3 or [e["attrs"].get("data-plan-header") for e in plan_headers] != list(names):
+            issues.append("the unified table requires the three plan introductions in its column headers")
+        for header in plan_headers:
+            key = header["attrs"].get("data-plan-header")
+            title_id = f"plan-{key}-title"
+            titles = [e for e in parsed.elements if e["tag"] == "h3" and e["attrs"].get("id") == title_id and inside(e, header)]
+            if header["attrs"].get("id") != f"plan-{key}" or header["attrs"].get("aria-labelledby", "").split() != [title_id] or len(titles) != 1 or element_text(titles[0]) != names.get(key):
+                issues.append(f"desktop plan {key!r} requires a full h3 heading and matching accessible column name")
+            if element_text(header).count("Custom monthly quote") != 1:
+                issues.append(f"desktop plan {key!r} must show Custom monthly quote once")
+            if any(("data-booking-plan" in e["attrs"] or "data-booking-open" in e["attrs"]) and inside(e, header) for e in parsed.elements):
+                issues.append(f"desktop plan {key!r} must not repeat its footer booking action in the header")
+            if ("Recommended" in element_text(header)) != (key == "standard"):
+                issues.append("Standard must be the only recommended desktop plan")
         bodies = [e for e in parsed.elements if e["tag"] == "tbody" and inside(e, table)]
         rows = [e for e in parsed.elements if e["tag"] == "tr" and any(inside(e, body) for body in bodies)]
         row_keys = [row["attrs"].get("data-feature", "") for row in rows]
@@ -282,6 +322,11 @@ def validate_plan_structure(parsed):
         summaries = [e for e in parsed.elements if e["tag"] == "summary" and e["parent"] is mobile[0]]
         if len(summaries) != 1 or not element_text(summaries[0]):
             issues.append(f"plan {key!r} mobile disclosure requires a readable summary")
+        card_links = [e for e in links if inside(e, card)]
+        element_order = {id(e): position for position, e in enumerate(parsed.elements)}
+        last_detail_position = max(element_order[id(e)] for e in parsed.elements if e is mobile[0] or inside(e, mobile[0]))
+        if len(card_links) == 1 and element_order[id(card_links[0])] <= last_detail_position:
+            issues.append(f"plan {key!r} mobile booking action must follow its feature disclosure")
         lists = [e for e in parsed.elements if e["tag"] == "dl" and inside(e, mobile[0])]
         mobile_rows = [e for e in parsed.elements if e["tag"] == "div" and "data-feature" in e["attrs"] and any(inside(e, listing) for listing in lists)]
         if len(lists) != 1 or len(mobile_rows) != 13 or sorted(e["attrs"].get("data-feature", "") for e in mobile_rows) != sorted(features):
@@ -404,6 +449,8 @@ for path in html_files:
 
     if parsed.duplicates:
         errors.append(f"{relative} duplicate IDs: {sorted(parsed.duplicates)}")
+    for issue in validate_header_slogan(parsed):
+        errors.append(f"{relative}: {issue}")
     for issue in public_copy_issues(parsed):
         errors.append(f"{relative}: {issue}")
     if parsed.images_without_alt:
@@ -636,7 +683,7 @@ if errors:
 print(
     f"Validated {len(html_files)} HTML files, {phone_count} native phone links, "
     f"{logo_count} updated logos, {anchor_count} local anchors, {aria_count} ARIA references, "
-    "three-plan comparison and mobile parity, quote routing, asset versions, CSS custom properties, blue branding, business hours, social links, "
+    "unified plan comparison and mobile parity, booking quote actions, header slogans, asset versions, CSS custom properties, blue branding, business hours, social links, "
     "no tracking code, SEO metadata, and integration hooks. "
     "Static checks do not verify external form delivery or bookings."
 )

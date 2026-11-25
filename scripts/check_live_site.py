@@ -12,8 +12,8 @@ import struct
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-BUILD = "production-2026-11-25-v11-service-plans"
-CACHE = "20261125plans11"
+BUILD = "production-2026-11-25-v12-brand-booking"
+CACHE = "20261125brand12"
 RELEASE_DATE = "2026-11-25"
 
 parser = argparse.ArgumentParser(description=__doc__)
@@ -26,6 +26,8 @@ errors = []
 
 class ReleaseParser(HTMLParser):
     """Collect release landmarks without relying on attribute order or quoting."""
+    VOID_TAGS = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"}
+
     def __init__(self):
         super().__init__()
         self.elements = []
@@ -35,10 +37,29 @@ class ReleaseParser(HTMLParser):
         self.interest_options = []
         self.sections = []
         self.faq_disclosures = 0
+        self.stack = []
+        self.header_slogans = []
+        self.slogan_depth = None
+        self.header_quote_count = 0
+        self.footer_quote_count = 0
 
     def handle_starttag(self, tag, attrs):
         attrs = dict(attrs)
         self.elements.append((tag, attrs))
+        in_header_brand = (
+            any(t == "header" and "site-header" in a.get("class", "").split() for t, a in self.stack)
+            and any(t == "a" and "brand" in a.get("class", "").split() for t, a in self.stack)
+        )
+        if "data-booking-plan" in attrs:
+            if any(t == "thead" for t, a in self.stack):
+                self.header_quote_count += 1
+            if any(t == "tfoot" for t, a in self.stack):
+                self.footer_quote_count += 1
+        if tag not in self.VOID_TAGS:
+            self.stack.append((tag, attrs))
+        if "brand-tagline" in attrs.get("class", "").split() and in_header_brand:
+            self.header_slogans.append([])
+            self.slogan_depth = len(self.stack)
         if tag in ("script", "style", "svg"):
             self.skip_text = tag
         if tag == "section":
@@ -57,10 +78,27 @@ class ReleaseParser(HTMLParser):
             self.in_interest = False
         if tag == "section" and self.sections:
             self.sections.pop()
+        for position in range(len(self.stack) - 1, -1, -1):
+            if self.stack[position][0] == tag:
+                del self.stack[position:]
+                break
+        if self.slogan_depth is not None and len(self.stack) < self.slogan_depth:
+            self.slogan_depth = None
 
     def handle_data(self, data):
         if self.skip_text is None:
             self.text.append(data)
+            if self.slogan_depth is not None:
+                self.header_slogans[-1].append(data)
+
+
+def check_header_slogan(body, route):
+    parsed = ReleaseParser()
+    parsed.feed(body)
+    parsed.close()
+    slogans = [" ".join(" ".join(parts).split()) for parts in parsed.header_slogans]
+    if slogans != ["Virginia's Trusted IT Partner"]:
+        errors.append(f"{route}: missing or incorrect slogan beneath the header logo")
 
 
 def check_homepage_structure(body):
@@ -70,10 +108,23 @@ def check_homepage_structure(body):
     names = {"essentials": "Managed IT Essentials", "standard": "Managed IT Standard", "premium": "Managed IT Premium"}
     cards = [attrs for tag, attrs in parsed.elements if tag == "article" and "plan-summary" in attrs.get("class", "").split()]
     if len(cards) != 3 or sorted(card.get("data-plan", "") for card in cards) != sorted(names):
-        errors.append("/: expected the three v11 managed-plan summaries")
+        errors.append("/: expected the three v12 mobile managed-plan summaries")
     recommended = [card for card in cards if card.get("data-recommended") == "true"]
     if len(recommended) != 1 or recommended[0].get("data-plan") != "standard":
         errors.append("/: Standard must be the only recommended plan")
+    mobile_containers = [attrs for tag, attrs in parsed.elements if {"plan-summaries", "plan-mobile-summaries"}.issubset(attrs.get("class", "").split())]
+    if len(mobile_containers) != 1:
+        errors.append("/: expected one mobile-only plan summary container")
+    plan_headers = [attrs for tag, attrs in parsed.elements if tag == "th" and "data-plan-header" in attrs]
+    if len(plan_headers) != 3 or [attrs.get("data-plan-header") for attrs in plan_headers] != list(names):
+        errors.append("/: the unified table requires three plan-introduction column headers")
+    for attrs in plan_headers:
+        key = attrs.get("data-plan-header")
+        title_id = f"plan-{key}-title"
+        if attrs.get("id") != f"plan-{key}" or attrs.get("scope") != "col" or attrs.get("aria-labelledby", "").split() != [title_id]:
+            errors.append(f"/: desktop plan {key!r} has an incorrect accessible column header")
+        if sum(tag == "h3" and candidate.get("id") == title_id for tag, candidate in parsed.elements) != 1:
+            errors.append(f"/: desktop plan {key!r} requires its full plan heading")
     readable = " ".join(" ".join(parsed.text).split())
     for name in names.values():
         if name not in readable:
@@ -90,13 +141,23 @@ def check_homepage_structure(body):
     rows = [attrs.get("data-feature") for tag, attrs in parsed.elements if tag == "tr" and "data-feature" in attrs]
     if len(rows) != 13 or set(rows) != features:
         errors.append("/: comparison must expose all 13 distinct service features")
-    quote_links = [attrs for tag, attrs in parsed.elements if tag == "a" and "data-plan-select" in attrs]
+    if any("data-plan-select" in attrs for tag, attrs in parsed.elements):
+        errors.append("/: obsolete form-scrolling plan actions are still deployed")
+    quote_links = [attrs for tag, attrs in parsed.elements if tag == "a" and "data-booking-plan" in attrs]
     if len(quote_links) != 6:
         errors.append("/: expected six plan-specific quote links")
     for name in names.values():
-        matching = [attrs for attrs in quote_links if attrs.get("data-plan-select") == name]
-        if len(matching) != 2 or any(attrs.get("href") != "#contact-form" for attrs in matching):
+        matching = [attrs for attrs in quote_links if attrs.get("data-booking-plan") == name]
+        if len(matching) != 2 or any(
+            "data-booking-open" not in attrs
+            or attrs.get("href") != "https://outlook.office.com/book/MeetNexGenBinary@nexgenbinary.com/"
+            or attrs.get("target") != "_blank" or "noopener" not in attrs.get("rel", "").split()
+            or attrs.get("aria-haspopup") != "dialog" or attrs.get("aria-controls") != "nb-booking-modal"
+            for attrs in matching
+        ):
             errors.append(f"/: incorrect quote routing for {name}")
+    if parsed.header_quote_count or parsed.footer_quote_count != 3:
+        errors.append("/: desktop quote actions must appear once per plan in the table footer, with none in its header")
     expected_options = set(names.values()) | {"Help me choose", "Project or one-time support"}
     if set(parsed.interest_options) - {""} != expected_options or len(parsed.interest_options) != len(set(parsed.interest_options)):
         errors.append("/: contact interest choices do not match the current plans")
@@ -171,6 +232,8 @@ for route, markers in checks.items():
     for forbidden in ("googletagmanager", "google-analytics", "assets/analytics.js", "analytics settings"):
         if forbidden in lowered:
             errors.append(f"{route}: contains removed tracking content: {forbidden}")
+    if route in ("/", "/book/", "/privacy/", "/terms/", "/404.html"):
+        check_header_slogan(body, route)
     if route == "/":
         check_homepage_structure(body)
     if route == "/.well-known/security.txt":
@@ -216,6 +279,7 @@ if data is not None:
     for marker in (BUILD, "noindex", f'/assets/site.css?v={CACHE}', f'/nexgenbinary-logo.png?v={CACHE}'):
         if marker not in body:
             errors.append(f"Custom 404: missing {marker!r}")
+    check_header_slogan(body, "Custom 404")
     if len(errors) == previous_errors:
         print("OK nested missing URL returns the updated custom 404 with root-relative assets")
 
