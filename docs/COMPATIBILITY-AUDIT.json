@@ -1,31 +1,425 @@
 {
-  "audit_date": "2026-07-24",
-  "build": "production-2026-07-24-v7-compatibility",
-  "status": "PASS_WITH_EXTERNAL_CONFIGURATION_ACTIONS",
-  "source_checks": {
-    "html_documents": 5,
-    "duplicate_ids": 0,
-    "native_phone_links": 14,
-    "javascript_syntax": "PASS",
-    "css_parse": "PASS",
-    "internal_links_and_assets": "PASS",
-    "seo_metadata": "PASS",
-    "tracking_code": "NONE"
+  "date": "2026-11-25",
+  "timezone": "America/New_York",
+  "build": "production-2026-11-25-v9-blue-brand",
+  "asset_version": "20261125brand9",
+  "site": "https://nexgenbinary.com/",
+  "repository_from_supplied_readme": "jooshondeh/site-public",
+  "status": "Local update validated; publishing is performed by the owner after uploading the replacement files.",
+  "live_baseline": {
+    "method": "Read-only HTTPS GET and SHA-256 comparison on 2026-11-25",
+    "result": "All eight checked live files matched the uploaded archive byte-for-byte.",
+    "files": [
+      {
+        "path": "index.html",
+        "sha256": "67c3692d38fa9bb7ef40eca9dc8b556a7f49bd09549f4691b3fbbdf9f16207ce"
+      },
+      {
+        "path": "assets/site.css",
+        "sha256": "0819967de29d8483df17d49ddf4212c00ad91ffb81edf0a2b6df3f82e588811f"
+      },
+      {
+        "path": "assets/site.js",
+        "sha256": "0e838f4d62865b573586e20496d597789df38dd58a2ba904840773cf2e4a4754"
+      },
+      {
+        "path": "book/index.html",
+        "sha256": "d9dae12595b54893389901e73614834a40a4392011d5ca812ad80167b529b967"
+      },
+      {
+        "path": "privacy/index.html",
+        "sha256": "2dda084d28c194dfff8647ded212c05a7edf50858f9531546d59c1f2a9440de4"
+      },
+      {
+        "path": "terms/index.html",
+        "sha256": "3d368f2e0502da32e965598e78713f64e08dede7695cebbf6a5ab80609b09bb2"
+      },
+      {
+        "path": "404.html",
+        "sha256": "fb5ac986cf69bb86c74f1667d13ebeb9b14251004d2428570dc4c1eaf181c119"
+      },
+      {
+        "path": "nexgenbinary-logo.png",
+        "sha256": "e6c57c574ec70f91b7fc143ed36fdb08cb92a8ebcc1af9a5dcfa69d4e4059760"
+      }
+    ]
   },
-  "compatibility_changes": [
-    "WebKit backdrop-filter fallback",
-    "100vh fallback before 100dvh",
-    "MediaQueryList addListener fallback",
-    "44x44 minimum mobile navigation target",
-    "Production cache refresh markers"
+  "branding": {
+    "logo_dimensions": [
+      960,
+      396
+    ],
+    "uploaded_logo_preserved_byte_for_byte": true,
+    "primary_blue": "#144681",
+    "light_blue": "#6099D8",
+    "deep_navy": "#102B49",
+    "primary_button_contrast": 9.45,
+    "hero_button_contrast": 4.81,
+    "social_preview_dimensions": [
+      1200,
+      630
+    ],
+    "favicon_exports": [
+      16,
+      32,
+      192,
+      512
+    ],
+    "apple_touch_icon_size": 180
+  },
+  "static_checks": {
+    "html_pages": 5,
+    "native_phone_links": 14,
+    "logo_instances": 11,
+    "local_anchors": 72,
+    "aria_references": 13,
+    "source_validation": "pass",
+    "javascript_syntax": "pass",
+    "deployment_allowlist_validation": "pass",
+    "replacement_overlay_validation": "pass"
+  },
+  "browser": {
+    "engine": "Cloud Chrome / Chromium",
+    "method": "Rendered website in fixed-size same-origin iframe viewports; computed layout measurements and selected visual/keyboard interaction checks.",
+    "layout_cases": [
+      {
+        "page": "/",
+        "viewport_width": 320,
+        "viewport_height": 568,
+        "document_client_width": 305,
+        "document_scroll_width": 305,
+        "overflowing_content_elements": 0,
+        "result": "pass"
+      },
+      {
+        "page": "/",
+        "viewport_width": 360,
+        "viewport_height": 800,
+        "document_client_width": 345,
+        "document_scroll_width": 345,
+        "overflowing_content_elements": 0,
+        "result": "pass"
+      },
+      {
+        "page": "/",
+        "viewport_width": 390,
+        "viewport_height": 844,
+        "document_client_width": 375,
+        "document_scroll_width": 375,
+        "overflowing_content_elements": 0,
+        "result": "pass"
+      },
+      {
+        "page": "/",
+        "viewport_width": 414,
+        "viewport_height": 896,
+        "document_client_width": 399,
+        "document_scroll_width": 399,
+        "overflowing_content_elements": 0,
+        "result": "pass"
+      },
+      {
+        "page": "/",
+        "viewport_width": 667,
+        "viewport_height": 375,
+        "document_client_width": 652,
+        "document_scroll_width": 652,
+        "overflowing_content_elements": 0,
+        "result": "pass"
+      },
+      {
+        "page": "/",
+        "viewport_width": 768,
+        "viewport_height": 1024,
+        "document_client_width": 753,
+        "document_scroll_width": 753,
+        "overflowing_content_elements": 0,
+        "result": "pass"
+      },
+      {
+        "page": "/",
+        "viewport_width": 1024,
+        "viewport_height": 768,
+        "document_client_width": 1009,
+        "document_scroll_width": 1009,
+        "overflowing_content_elements": 0,
+        "result": "pass"
+      },
+      {
+        "page": "/",
+        "viewport_width": 1280,
+        "viewport_height": 800,
+        "document_client_width": 1265,
+        "document_scroll_width": 1265,
+        "overflowing_content_elements": 0,
+        "result": "pass"
+      },
+      {
+        "page": "/",
+        "viewport_width": 1440,
+        "viewport_height": 900,
+        "document_client_width": 1425,
+        "document_scroll_width": 1425,
+        "overflowing_content_elements": 0,
+        "result": "pass"
+      },
+      {
+        "page": "/",
+        "viewport_width": 1920,
+        "viewport_height": 1080,
+        "document_client_width": 1905,
+        "document_scroll_width": 1905,
+        "overflowing_content_elements": 0,
+        "result": "pass"
+      },
+      {
+        "page": "/privacy/",
+        "viewport_width": 320,
+        "viewport_height": 568,
+        "document_client_width": 305,
+        "document_scroll_width": 305,
+        "overflowing_content_elements": 0,
+        "result": "pass"
+      },
+      {
+        "page": "/privacy/",
+        "viewport_width": 390,
+        "viewport_height": 844,
+        "document_client_width": 375,
+        "document_scroll_width": 375,
+        "overflowing_content_elements": 0,
+        "result": "pass"
+      },
+      {
+        "page": "/privacy/",
+        "viewport_width": 667,
+        "viewport_height": 375,
+        "document_client_width": 652,
+        "document_scroll_width": 652,
+        "overflowing_content_elements": 0,
+        "result": "pass"
+      },
+      {
+        "page": "/privacy/",
+        "viewport_width": 768,
+        "viewport_height": 1024,
+        "document_client_width": 753,
+        "document_scroll_width": 753,
+        "overflowing_content_elements": 0,
+        "result": "pass"
+      },
+      {
+        "page": "/privacy/",
+        "viewport_width": 1024,
+        "viewport_height": 768,
+        "document_client_width": 1009,
+        "document_scroll_width": 1009,
+        "overflowing_content_elements": 0,
+        "result": "pass"
+      },
+      {
+        "page": "/privacy/",
+        "viewport_width": 1440,
+        "viewport_height": 900,
+        "document_client_width": 1425,
+        "document_scroll_width": 1425,
+        "overflowing_content_elements": 0,
+        "result": "pass"
+      },
+      {
+        "page": "/terms/",
+        "viewport_width": 320,
+        "viewport_height": 568,
+        "document_client_width": 305,
+        "document_scroll_width": 305,
+        "overflowing_content_elements": 0,
+        "result": "pass"
+      },
+      {
+        "page": "/terms/",
+        "viewport_width": 390,
+        "viewport_height": 844,
+        "document_client_width": 375,
+        "document_scroll_width": 375,
+        "overflowing_content_elements": 0,
+        "result": "pass"
+      },
+      {
+        "page": "/terms/",
+        "viewport_width": 667,
+        "viewport_height": 375,
+        "document_client_width": 652,
+        "document_scroll_width": 652,
+        "overflowing_content_elements": 0,
+        "result": "pass"
+      },
+      {
+        "page": "/terms/",
+        "viewport_width": 768,
+        "viewport_height": 1024,
+        "document_client_width": 753,
+        "document_scroll_width": 753,
+        "overflowing_content_elements": 0,
+        "result": "pass"
+      },
+      {
+        "page": "/terms/",
+        "viewport_width": 1024,
+        "viewport_height": 768,
+        "document_client_width": 1009,
+        "document_scroll_width": 1009,
+        "overflowing_content_elements": 0,
+        "result": "pass"
+      },
+      {
+        "page": "/terms/",
+        "viewport_width": 1440,
+        "viewport_height": 900,
+        "document_client_width": 1425,
+        "document_scroll_width": 1425,
+        "overflowing_content_elements": 0,
+        "result": "pass"
+      },
+      {
+        "page": "/book/",
+        "viewport_width": 320,
+        "viewport_height": 568,
+        "document_client_width": 305,
+        "document_scroll_width": 305,
+        "overflowing_content_elements": 0,
+        "result": "pass"
+      },
+      {
+        "page": "/book/",
+        "viewport_width": 390,
+        "viewport_height": 844,
+        "document_client_width": 375,
+        "document_scroll_width": 375,
+        "overflowing_content_elements": 0,
+        "result": "pass"
+      },
+      {
+        "page": "/book/",
+        "viewport_width": 667,
+        "viewport_height": 375,
+        "document_client_width": 652,
+        "document_scroll_width": 652,
+        "overflowing_content_elements": 0,
+        "result": "pass"
+      },
+      {
+        "page": "/book/",
+        "viewport_width": 768,
+        "viewport_height": 1024,
+        "document_client_width": 753,
+        "document_scroll_width": 753,
+        "overflowing_content_elements": 0,
+        "result": "pass"
+      },
+      {
+        "page": "/book/",
+        "viewport_width": 1024,
+        "viewport_height": 768,
+        "document_client_width": 1009,
+        "document_scroll_width": 1009,
+        "overflowing_content_elements": 0,
+        "result": "pass"
+      },
+      {
+        "page": "/book/",
+        "viewport_width": 1440,
+        "viewport_height": 900,
+        "document_client_width": 1425,
+        "document_scroll_width": 1425,
+        "overflowing_content_elements": 0,
+        "result": "pass"
+      },
+      {
+        "page": "/404.html",
+        "viewport_width": 320,
+        "viewport_height": 568,
+        "document_client_width": 305,
+        "document_scroll_width": 305,
+        "overflowing_content_elements": 0,
+        "result": "pass"
+      },
+      {
+        "page": "/404.html",
+        "viewport_width": 390,
+        "viewport_height": 844,
+        "document_client_width": 375,
+        "document_scroll_width": 375,
+        "overflowing_content_elements": 0,
+        "result": "pass"
+      },
+      {
+        "page": "/404.html",
+        "viewport_width": 667,
+        "viewport_height": 375,
+        "document_client_width": 652,
+        "document_scroll_width": 652,
+        "overflowing_content_elements": 0,
+        "result": "pass"
+      },
+      {
+        "page": "/404.html",
+        "viewport_width": 768,
+        "viewport_height": 1024,
+        "document_client_width": 753,
+        "document_scroll_width": 753,
+        "overflowing_content_elements": 0,
+        "result": "pass"
+      },
+      {
+        "page": "/404.html",
+        "viewport_width": 1024,
+        "viewport_height": 768,
+        "document_client_width": 1009,
+        "document_scroll_width": 1009,
+        "overflowing_content_elements": 0,
+        "result": "pass"
+      },
+      {
+        "page": "/404.html",
+        "viewport_width": 1440,
+        "viewport_height": 900,
+        "document_client_width": 1425,
+        "document_scroll_width": 1425,
+        "overflowing_content_elements": 0,
+        "result": "pass"
+      }
+    ],
+    "note": "Desktop scrollbars reduced the actual content width by 15 CSS px in these captures, so the 320px viewport was also checked at 305px of available content width."
+  },
+  "interaction_checks": [
+    "Landscape navigation constrained to viewport and independently scrollable; final links reachable by keyboard.",
+    "Menu label changes with expanded state; Escape closes and restores focus to the toggle.",
+    "Pointer and keyboard Contact navigation lands below the sticky header and sets aria-current.",
+    "320px no-JavaScript fallback exposes all seven primary-navigation links and avoids horizontal overflow.",
+    "Native booking dialog opens, closes by button and Escape, restores focus, and keeps the close button within the viewport.",
+    "320px booking dialog: 296px wide, 544px high, 44px close button; full-width privacy note and visible external-booking fallback.",
+    "Malformed #% fragment does not prevent navigation/form enhancement from initializing.",
+    "320px contact email wraps, privacy reminder spans the form, and the description ID resolves.",
+    "Isolated local form simulation: empty fields produce three errors with focus on Name and zero requests.",
+    "Isolated local form simulation: valid fields without simulated verification produce zero requests.",
+    "Isolated local form simulation: HTTP 503 preserves entered message, reports the error and restores the send button.",
+    "Isolated local form simulation: success clears form, opens native confirmation, focuses OK, and permits Escape dismissal.",
+    "Isolated local form simulation: 20-second stalled-request deadline aborts, preserves the message and restores controls.",
+    "Actual-container CAPTCHA sizing selected compact mode at the narrow form width in the simulation."
   ],
-  "external_actions": [
-    "Confirm Google Business verification from the owner account",
-    "Correct storefront versus service-area configuration",
-    "Repair public business-hours display",
-    "Upload the provided 720x720 logo asset after verification",
-    "Configure Microsoft Bookings reminders and follow-up",
-    "Confirm Google Voice subscription type and use Workspace Voice Standard for multi-user ring groups"
+  "verification_limits": [
+    "Responsive layout emulation is not exhaustive physical-device or cross-engine testing. Safari, Firefox, Android/iOS devices, screen readers, OS high-contrast mode and actual pinch/browser zoom were not executed.",
+    "Reduced-motion, forced-colors, safe-area and fallback behavior are implemented and source-reviewed; only the stated browser checks were executed.",
+    "Live Microsoft Bookings calendar did not render in the local preview. An exact-URL HTTP probe returned empty HTTP 417 through an envoy server; this does not establish a production URL or framing defect. Existing URL retained and external fallback made visible.",
+    "Form success/error/timeout behavior was tested with isolated local mocks and outgoing connections disabled. No real Formspree message was sent, no live CAPTCHA was completed, and no appointment was booked.",
+    "GitHub Actions deployment was reproduced locally through its file allowlist and validators. No commit, push or live deployment was performed."
   ],
-  "browser_test_scope_note": "Static, structural, syntax, responsive-rule, prior viewport QA, and live HTTP/content checks were completed. A physical device lab and every browser/OS version cannot be exhaustively simulated in this environment; use the included post-deployment matrix for final device acceptance."
+  "sources": [
+    "https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html",
+    "https://www.w3.org/WAI/WCAG22/Understanding/reflow.html",
+    "https://developer.mozilla.org/en-US/docs/Web/API/HTMLDialogElement/showModal",
+    "https://docs.github.com/en/repositories/working-with-files/managing-files/adding-a-file-to-a-repository",
+    "https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site",
+    "https://learn.microsoft.com/en-us/microsoft-365/bookings/share-shared-bookings-page?view=o365-worldwide"
+  ]
 }

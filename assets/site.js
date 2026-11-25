@@ -1,6 +1,11 @@
 (() => {
   'use strict';
 
+  document.documentElement.classList.add('js');
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const scrollToElement = (element, block = 'center') => {
+    element?.scrollIntoView({ behavior: reducedMotion.matches ? 'auto' : 'smooth', block });
+  };
 
   // Preserve valid section URLs on refresh. Pages without a section hash start at top.
   const navigationEntry = performance.getEntriesByType?.('navigation')?.[0];
@@ -18,7 +23,15 @@
       .filter(Boolean)
   );
 
-  const currentHashId = () => decodeURIComponent(window.location.hash.slice(1));
+  const currentHashId = () => {
+    const hash = window.location.hash.slice(1);
+    try {
+      return decodeURIComponent(hash);
+    } catch {
+      // A malformed incoming fragment must not disable the rest of the page.
+      return hash;
+    }
+  };
   const isValidSectionHash = (id) => sectionHashIds.has(id) && !!document.getElementById(id);
 
   const scrollReloadToTop = () => {
@@ -147,10 +160,28 @@
   const navLinks = Array.from(document.querySelectorAll('[data-nav-link]'));
   const mobileBreakpoint = window.matchMedia('(max-width: 1180px)');
 
+  // CSS controls the minimum height; this offset follows wrapping and zoom.
+  const measureHeader = () => {
+    if (!header) return;
+    const height = `${Math.ceil(header.getBoundingClientRect().height)}px`;
+    if (document.documentElement.style.getPropertyValue('--header-height') !== height) {
+      document.documentElement.style.setProperty('--header-height', height);
+    }
+  };
+  measureHeader();
+  if (header && 'ResizeObserver' in window) {
+    new ResizeObserver(measureHeader).observe(header);
+  } else {
+    window.addEventListener('resize', measureHeader, { passive: true });
+  }
+  document.fonts?.ready.then(measureHeader);
+  window.addEventListener('pageshow', measureHeader);
+
   const closeNav = () => {
     if (!toggle || !nav) return;
     nav.classList.remove('is-open');
     toggle.setAttribute('aria-expanded', 'false');
+    toggle.setAttribute('aria-label', 'Open navigation');
   };
 
   if (toggle && nav) {
@@ -158,6 +189,7 @@
       const open = !nav.classList.contains('is-open');
       nav.classList.toggle('is-open', open);
       toggle.setAttribute('aria-expanded', String(open));
+      toggle.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
     });
     document.addEventListener('click', (event) => {
       if (!mobileBreakpoint.matches || !nav.classList.contains('is-open')) return;
@@ -165,7 +197,10 @@
       closeNav();
     });
     document.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape') closeNav();
+      if (event.key !== 'Escape' || !nav.classList.contains('is-open')) return;
+      event.preventDefault();
+      closeNav();
+      toggle.focus({ preventScroll: true });
     });
     if (typeof mobileBreakpoint.addEventListener === 'function') {
       mobileBreakpoint.addEventListener('change', closeNav);
@@ -220,7 +255,10 @@
     }
 
     sectionLinks.forEach((link) => {
-      link.classList.toggle('is-active', link.getAttribute('href') === `#${current}`);
+      const active = link.getAttribute('href') === `#${current}`;
+      link.classList.toggle('is-active', active);
+      if (active) link.setAttribute('aria-current', 'location');
+      else link.removeAttribute('aria-current');
     });
 
     if (updateUrl) updateSectionUrl(current);
@@ -238,10 +276,9 @@
     const initialHash = currentHashId();
     setActiveLink({ updateUrl: !isValidSectionHash(initialHash) });
 
-    window.addEventListener('scroll', () => {
-      if (mobileBreakpoint.matches && nav?.classList.contains('is-open')) closeNav();
-      scheduleSectionUpdate();
-    }, { passive: true });
+    // Keep the menu available while its links are scrolled into view by touch
+    // or keyboard. Selection, Escape, outside clicks and breakpoint changes close it.
+    window.addEventListener('scroll', scheduleSectionUpdate, { passive: true });
 
     window.addEventListener('resize', scheduleSectionUpdate);
     window.addEventListener('pageshow', () => setActiveLink({
@@ -268,6 +305,39 @@
     }
   };
 
+  const nativeDialog = (modal) => typeof modal?.showModal === 'function';
+  const fallbackModalState = new WeakMap();
+  const isolateFallbackModal = (modal) => {
+    if (nativeDialog(modal) || fallbackModalState.has(modal)) return;
+    const saved = [];
+    let branch = modal;
+    while (branch.parentElement) {
+      const parent = branch.parentElement;
+      [...parent.children].forEach((element) => {
+        if (element === branch || /^(SCRIPT|STYLE|LINK)$/.test(element.tagName)) return;
+        saved.push({
+          element,
+          inert: element.getAttribute('inert'),
+          ariaHidden: element.getAttribute('aria-hidden')
+        });
+        element.setAttribute('inert', '');
+        element.setAttribute('aria-hidden', 'true');
+      });
+      if (parent === document.body) break;
+      branch = parent;
+    }
+    fallbackModalState.set(modal, saved);
+  };
+  const restoreFallbackModal = (modal) => {
+    (fallbackModalState.get(modal) || []).forEach(({ element, inert, ariaHidden }) => {
+      if (inert === null) element.removeAttribute('inert');
+      else element.setAttribute('inert', inert);
+      if (ariaHidden === null) element.removeAttribute('aria-hidden');
+      else element.setAttribute('aria-hidden', ariaHidden);
+    });
+    fallbackModalState.delete(modal);
+  };
+
   const bookingModal = document.getElementById('nb-booking-modal');
   const bookingFrame = document.getElementById('nb-booking-iframe');
   const bookingOpeners = Array.from(document.querySelectorAll('[data-booking-open]'));
@@ -287,12 +357,20 @@
 
   const openBooking = (event) => {
     if (!bookingModal || !bookingFrame) return;
+    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button > 0) return;
     event.preventDefault();
+    if (bookingModal.classList.contains('is-open')) return;
     bookingReturnFocus = event.currentTarget || document.activeElement;
-    if (!bookingFrame.src) bookingFrame.src = bookingFrame.dataset.src || '';
+    if (!bookingFrame.getAttribute('src')) bookingFrame.src = bookingFrame.dataset.src || '';
     closeNav();
     bookingModal.classList.add('is-open');
     bookingModal.setAttribute('aria-hidden', 'false');
+    bookingModal.setAttribute('aria-modal', 'true');
+    if (nativeDialog(bookingModal)) bookingModal.showModal();
+    else {
+      bookingModal.setAttribute('open', '');
+      isolateFallbackModal(bookingModal);
+    }
     document.documentElement.classList.add('nb-modal-open');
     document.body.classList.add('nb-modal-open');
     window.setTimeout(() => bookingModal.querySelector('.nb-booking-close')?.focus({ preventScroll: true }), 0);
@@ -300,18 +378,30 @@
 
   const closeBooking = (event) => {
     event?.preventDefault();
-    if (!bookingModal) return;
+    if (!bookingModal?.classList.contains('is-open')) return;
+    if (nativeDialog(bookingModal) && bookingModal.open) bookingModal.close();
+    else bookingModal.removeAttribute('open');
     bookingModal.classList.remove('is-open');
     bookingModal.setAttribute('aria-hidden', 'true');
+    bookingModal.removeAttribute('aria-modal');
+    restoreFallbackModal(bookingModal);
     document.documentElement.classList.remove('nb-modal-open');
     document.body.classList.remove('nb-modal-open');
-    if (bookingReturnFocus instanceof HTMLElement) {
-      window.setTimeout(() => bookingReturnFocus.focus({ preventScroll: true }), 0);
+    const returnFocus = bookingReturnFocus;
+    bookingReturnFocus = null;
+    if (returnFocus instanceof HTMLElement && returnFocus.isConnected) {
+      window.setTimeout(() => returnFocus.focus({ preventScroll: true }), 0);
     }
   };
 
   bookingOpeners.forEach((opener) => opener.addEventListener('click', openBooking));
   bookingClosers.forEach((closer) => closer.addEventListener('click', closeBooking));
+  bookingModal?.addEventListener('cancel', closeBooking);
+  bookingModal?.addEventListener('close', closeBooking);
+  document.addEventListener('focusin', (event) => {
+    if (!bookingModal?.classList.contains('is-open') || nativeDialog(bookingModal)) return;
+    if (!bookingModal.contains(event.target)) bookingFocusable()[0]?.focus();
+  });
 
   document.addEventListener('keydown', (event) => {
     if (!bookingModal?.classList.contains('is-open')) return;
@@ -319,6 +409,7 @@
       closeBooking(event);
       return;
     }
+    if (nativeDialog(bookingModal)) return;
     if (event.key !== 'Tab') return;
     const focusable = bookingFocusable();
     if (!focusable.length) return;
@@ -353,14 +444,38 @@
     const endpoint = form.getAttribute('action') || form.dataset.formspreeEndpoint || '';
 
     const captchaWidget = form.querySelector('[data-hcaptcha-lazy], .h-captcha[data-sitekey]');
-    const captchaLoadStatus = captchaWidget?.querySelector('[data-hcaptcha-load-status]');
+    let captchaLoadStatus = captchaWidget?.querySelector('[data-hcaptcha-load-status]');
     const captchaSitekey = captchaWidget?.dataset.sitekey || '';
     let captchaWidgetId = null;
     let captchaLoadPromise = null;
 
     const setCaptchaLoadStatus = (message, busy = false) => {
-      if (captchaWidget) captchaWidget.setAttribute('aria-busy', busy ? 'true' : 'false');
+      if (!captchaWidget) return;
+      captchaWidget.setAttribute('aria-busy', busy ? 'true' : 'false');
+      if (!captchaLoadStatus?.isConnected && captchaWidgetId === null) {
+        captchaLoadStatus = document.createElement('span');
+        captchaLoadStatus.className = 'captcha-load-status';
+        captchaLoadStatus.dataset.hcaptchaLoadStatus = '';
+        captchaLoadStatus.setAttribute('role', 'status');
+        captchaLoadStatus.setAttribute('aria-live', 'polite');
+        captchaWidget.replaceChildren(captchaLoadStatus);
+      }
       if (captchaLoadStatus?.isConnected) captchaLoadStatus.textContent = message;
+      if (busy) captchaWidget.querySelector('[data-captcha-retry]')?.remove();
+    };
+
+    const reportCaptchaLoadFailure = () => {
+      const message = 'Verification could not load. Retry verification or email us directly.';
+      setCaptchaLoadStatus(message);
+      if (captchaError) captchaError.textContent = message;
+      if (!captchaWidget || captchaWidget.querySelector('[data-captcha-retry]')) return;
+      const retry = document.createElement('button');
+      retry.type = 'button';
+      retry.className = 'button button-secondary button-small';
+      retry.dataset.captchaRetry = '';
+      retry.textContent = 'Retry verification';
+      retry.addEventListener('click', () => requestCaptchaLoad());
+      captchaWidget.append(retry);
     };
 
     const renderHCaptcha = () => {
@@ -369,12 +484,25 @@
         throw new Error('Verification could not initialize.');
       }
 
+      const parent = captchaWidget.parentElement;
+      const parentStyle = parent ? window.getComputedStyle(parent) : null;
+      const parentWidth = parent
+        ? parent.clientWidth - parseFloat(parentStyle.paddingLeft || 0) - parseFloat(parentStyle.paddingRight || 0)
+        : 0;
+      const measuredWidth = Math.min(
+        captchaWidget.clientWidth || Infinity,
+        parentWidth || Infinity
+      );
+      const availableWidth = Number.isFinite(measuredWidth) ? measuredWidth : 0;
       captchaWidget.replaceChildren();
       captchaWidget.setAttribute('aria-busy', 'false');
       captchaWidgetId = window.hcaptcha.render(captchaWidget, {
         sitekey: captchaSitekey,
-        size: window.matchMedia('(max-width: 380px)').matches ? 'compact' : 'normal',
+        size: availableWidth >= 304 ? 'normal' : 'compact',
         theme: 'light',
+        callback: () => {
+          if (captchaError) captchaError.textContent = '';
+        },
         'error-callback': () => {
           if (captchaError) captchaError.textContent = 'Verification encountered an error. Please retry or email us directly.';
         },
@@ -382,47 +510,67 @@
           if (captchaError) captchaError.textContent = 'Verification expired. Please complete it again.';
         }
       });
+      if (captchaError) captchaError.textContent = '';
       return captchaWidgetId;
     };
 
     const loadHCaptcha = () => {
       if (!captchaWidget) return Promise.resolve(null);
       if (captchaWidgetId !== null) return Promise.resolve(captchaWidgetId);
-      if (window.hcaptcha?.render) return Promise.resolve(renderHCaptcha());
       if (captchaLoadPromise) return captchaLoadPromise;
 
       setCaptchaLoadStatus('Loading verification…', true);
-      captchaLoadPromise = new Promise((resolve, reject) => {
+      const loading = window.hcaptcha?.render
+        ? Promise.resolve().then(renderHCaptcha)
+        : new Promise((resolve, reject) => {
         const callbackName = 'nexgenHCaptchaReady';
-        const existingScript = document.querySelector('script[data-nexgen-hcaptcha]');
+        // A failed prior attempt must not leave a promise waiting on a stale script.
+        document.querySelector('script[data-nexgen-hcaptcha]')?.remove();
+        const script = document.createElement('script');
+        let settled = false;
+        let timeoutId;
 
-        window[callbackName] = () => {
-          try {
-            resolve(renderHCaptcha());
-          } catch (error) {
-            captchaLoadPromise = null;
-            reject(error);
-          } finally {
+        const cleanup = () => {
+          window.clearTimeout(timeoutId);
+          script.onerror = null;
+          if (window[callbackName] === ready) {
             try { delete window[callbackName]; } catch {}
           }
         };
+        const fail = (error) => {
+          if (settled) return;
+          settled = true;
+          cleanup();
+          script.remove();
+          reject(error);
+        };
 
-        if (existingScript) return;
-
-        const script = document.createElement('script');
+        const ready = () => {
+          if (settled) return;
+          try {
+            const widgetId = renderHCaptcha();
+            settled = true;
+            cleanup();
+            resolve(widgetId);
+          } catch (error) {
+            fail(error);
+          }
+        };
+        window[callbackName] = ready;
         script.async = true;
         script.defer = true;
         script.dataset.nexgenHcaptcha = '';
         script.src = `https://js.hcaptcha.com/1/api.js?onload=${callbackName}&render=explicit&recaptchacompat=off`;
-        script.onerror = () => {
-          captchaLoadPromise = null;
-          script.remove();
-          setCaptchaLoadStatus('Verification could not load. Please retry or email us directly.', false);
-          reject(new Error('Verification could not load.'));
-        };
+        script.onerror = () => fail(new Error('Verification could not load.'));
+        timeoutId = window.setTimeout(() => fail(new Error('Verification timed out.')), 15000);
         document.head.append(script);
       });
 
+      captchaLoadPromise = loading.catch((error) => {
+        captchaLoadPromise = null;
+        reportCaptchaLoadFailure();
+        throw error;
+      });
       return captchaLoadPromise;
     };
 
@@ -430,7 +578,6 @@
       warmExternalOrigin('https://js.hcaptcha.com');
       loadHCaptcha().catch((error) => {
         console.error('hCaptcha failed to load:', error);
-        if (captchaError) captchaError.textContent = 'Verification could not load. Please retry or email us directly.';
       });
     };
 
@@ -493,30 +640,50 @@
       successReturnFocus = submitButton || document.activeElement;
       successModal.classList.add('is-open');
       successModal.setAttribute('aria-hidden', 'false');
+      successModal.setAttribute('aria-modal', 'true');
+      if (nativeDialog(successModal)) successModal.showModal();
+      else {
+        successModal.setAttribute('open', '');
+        isolateFallbackModal(successModal);
+      }
       document.documentElement.classList.add('form-modal-open');
       document.body.classList.add('form-modal-open');
       window.setTimeout(() => successClose?.focus({ preventScroll: true }), 0);
     };
 
-    const closeSuccess = () => {
-      if (!successModal) return;
+    const closeSuccess = (event) => {
+      event?.preventDefault();
+      if (!successModal?.classList.contains('is-open')) return;
+      if (nativeDialog(successModal) && successModal.open) successModal.close();
+      else successModal.removeAttribute('open');
       successModal.classList.remove('is-open');
       successModal.setAttribute('aria-hidden', 'true');
+      successModal.removeAttribute('aria-modal');
+      restoreFallbackModal(successModal);
       document.documentElement.classList.remove('form-modal-open');
       document.body.classList.remove('form-modal-open');
 
-      if (successReturnFocus instanceof HTMLElement) {
+      const returnFocus = successReturnFocus;
+      successReturnFocus = null;
+      if (returnFocus instanceof HTMLElement && returnFocus.isConnected) {
         window.setTimeout(
-          () => successReturnFocus.focus({ preventScroll: true }),
+          () => returnFocus.focus({ preventScroll: true }),
           0
         );
       }
     };
 
     successClose?.addEventListener('click', closeSuccess);
+    successModal?.addEventListener('cancel', closeSuccess);
+    successModal?.addEventListener('close', closeSuccess);
     successModal
       ?.querySelector('.form-success-backdrop')
       ?.addEventListener('click', closeSuccess);
+
+    document.addEventListener('focusin', (event) => {
+      if (!successModal?.classList.contains('is-open') || nativeDialog(successModal)) return;
+      if (!successModal.contains(event.target)) successFocusable()[0]?.focus();
+    });
 
     document.addEventListener('keydown', (event) => {
       if (!successModal?.classList.contains('is-open')) return;
@@ -527,6 +694,7 @@
         return;
       }
 
+      if (nativeDialog(successModal)) return;
       if (event.key !== 'Tab') return;
 
       const focusable = successFocusable();
@@ -555,8 +723,10 @@
       }
     };
 
+    let submissionInFlight = false;
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
+      if (submissionInFlight) return;
       let firstInvalid = null;
       for (const field of requiredFields) {
         if (!validateField(field) && !firstInvalid) firstInvalid = field;
@@ -574,45 +744,68 @@
         return;
       }
 
-      if (captchaWidget) {
-        try {
-          await loadHCaptcha();
-        } catch {
-          if (captchaError) captchaError.textContent = 'Verification could not load. Please retry or email us directly.';
-          setStatus('Verification could not load. Please retry or email us directly.', 'error');
-          captchaWidget.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          return;
-        }
-
-        const captchaToken = String(window.hcaptcha?.getResponse(captchaWidgetId) || '').trim();
-        if (!captchaToken) {
-          if (captchaError) captchaError.textContent = 'Complete the verification before sending.';
-          setStatus('Please complete the verification before sending.', 'error');
-          captchaWidget.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          return;
-        }
-      }
-      if (captchaError) captchaError.textContent = '';
-
-      const data = new FormData(form);
-      data.set('_replyto', String(data.get('email') || ''));
-      data.set('_subject', 'New website message from NexGen Binary LLC');
-
+      submissionInFlight = true;
       const originalLabel = submitLabel?.textContent || 'Send Message';
       submitButton?.setAttribute('disabled', 'disabled');
-      if (submitLabel) submitLabel.textContent = 'Sending…';
-      setStatus('Sending your message…', 'sending');
+      form.setAttribute('aria-busy', 'true');
+      if (submitLabel) submitLabel.textContent = 'Checking…';
+      let requestTimeoutId;
+      let requestStarted = false;
+      let requestTimedOut = false;
 
       try {
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: { Accept: 'application/json' },
-          body: data
-        });
-        if (!response.ok) {
-          const detail = await parseFormspreeError(response);
-          throw new Error(detail || `Request failed (${response.status}).`);
+        let captchaToken = '';
+        if (captchaWidget) {
+          setStatus('Checking verification…', 'sending');
+          try {
+            await loadHCaptcha();
+          } catch {
+            setStatus('Verification could not load. Retry verification or email us directly.', 'error');
+            scrollToElement(captchaWidget);
+            return;
+          }
+
+          captchaToken = String(window.hcaptcha?.getResponse(captchaWidgetId) || '').trim();
+          if (!captchaToken) {
+            if (captchaError) captchaError.textContent = 'Complete the verification before sending.';
+            setStatus('Please complete the verification before sending.', 'error');
+            scrollToElement(captchaWidget);
+            return;
+          }
         }
+        if (captchaError) captchaError.textContent = '';
+        if (!endpoint) throw new Error('The message service is unavailable.');
+
+        const data = new FormData(form);
+        data.set('_replyto', String(data.get('email') || ''));
+        data.set('_subject', 'New website message from NexGen Binary LLC');
+        if (captchaWidget) data.set('h-captcha-response', captchaToken);
+
+        if (submitLabel) submitLabel.textContent = 'Sending…';
+        setStatus('Sending your message…', 'sending');
+        const controller = typeof AbortController === 'function' ? new AbortController() : null;
+        const deadline = new Promise((resolve, reject) => {
+          requestTimeoutId = window.setTimeout(() => {
+            requestTimedOut = true;
+            controller?.abort();
+            reject(new Error('The message request timed out.'));
+          }, 20000);
+        });
+        requestStarted = true;
+        const send = async () => {
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { Accept: 'application/json' },
+            body: data,
+            ...(controller ? { signal: controller.signal } : {})
+          });
+          if (!response.ok) {
+            const detail = await parseFormspreeError(response);
+            throw new Error(detail || `Request failed (${response.status}).`);
+          }
+        };
+        await Promise.race([send(), deadline]);
+        window.clearTimeout(requestTimeoutId);
 
         form.reset();
         requiredFields.forEach((field) => {
@@ -628,19 +821,30 @@
         window.dispatchEvent(new CustomEvent('nexgen:contact-form-success'));
       } catch (error) {
         const detail = error instanceof Error ? error.message.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 180) : '';
-        setStatus(detail ? `Unable to send: ${detail}` : 'Unable to send right now. Please try again or use the email link.', 'error');
+        const message = requestTimedOut
+          ? 'Delivery could not be confirmed because the request timed out. Please email or call us before resending.'
+          : `Unable to send${detail ? `: ${detail}` : ' right now.'} Please try again or email us directly.`;
+        setStatus(message, 'error');
+        if (requestStarted && window.hcaptcha?.reset) {
+          try { window.hcaptcha.reset(captchaWidgetId); } catch {}
+        }
         window.dispatchEvent(new CustomEvent('nexgen:contact-form-error'));
         console.error('Contact form submission failed:', error);
       } finally {
+        window.clearTimeout(requestTimeoutId);
+        submissionInFlight = false;
+        form.setAttribute('aria-busy', 'false');
         submitButton?.removeAttribute('disabled');
         if (submitLabel) submitLabel.textContent = originalLabel;
       }
     });
+    // Keep native validation when JavaScript is unavailable; use linked inline
+    // errors only after the complete enhanced submission handler is installed.
+    form.noValidate = true;
   }
 
   const backToTop = document.querySelector('[data-back-to-top]');
   if (backToTop) {
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const updateBackToTop = () => {
       const visible = window.scrollY > 420;
       backToTop.classList.toggle('is-visible', visible);
